@@ -13,7 +13,7 @@ const ProfileHeader = ({ restaurant }: ProfileHeaderProps) => {
   const menuUrl = `${window.location.origin}/r/${restaurant.username}`;
   return (
     <div className="px-4 pt-4 pb-2">
-      {/* Top row: avatar + stats */}
+      {/* Restaurant identity */}
       <div className="flex items-center gap-4 mb-3">
         <div className="story-ring shrink-0">
           <div className="rounded-full overflow-hidden bg-background p-[2px]">
@@ -27,20 +27,6 @@ const ProfileHeader = ({ restaurant }: ProfileHeaderProps) => {
           </div>
         </div>
 
-        <div className="flex-1 grid grid-cols-3 text-center gap-1">
-          <div>
-            <p className="text-lg font-bold text-foreground">{restaurant.posts}</p>
-            <p className="text-xs text-muted-foreground">platillos</p>
-          </div>
-          <div>
-            <p className="text-lg font-bold text-foreground">{restaurant.followers}</p>
-            <p className="text-xs text-muted-foreground">seguidores</p>
-          </div>
-          <div>
-            <p className="text-lg font-bold text-foreground">{restaurant.following}</p>
-            <p className="text-xs text-muted-foreground">siguiendo</p>
-          </div>
-        </div>
       </div>
 
       {/* Name + Bio */}

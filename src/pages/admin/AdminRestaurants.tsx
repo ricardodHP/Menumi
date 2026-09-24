@@ -264,11 +264,6 @@ export default function AdminRestaurants() {
                   <Button variant="outline" size="sm" onClick={() => openEdit(r)}>
                     <Pencil className="h-3 w-3" /> Editar
                   </Button>
-                  <Button asChild variant="outline" size="sm">
-                    <Link to={`/dashboard/meseros?restaurant=${r.id}`}>
-                      <UserPlus className="h-3 w-3" /> Meseros
-                    </Link>
-                  </Button>
                   <Button
                     variant="outline"
                     size="sm"

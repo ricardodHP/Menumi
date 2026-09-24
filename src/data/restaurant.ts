@@ -28,8 +28,6 @@ export interface RestaurantInfo {
   username: string; // slug
   bio: string;
   posts: number;
-  followers: string;
-  following: number;
   whatsappLink: string;
   instagramLink: string;
   address?: string;

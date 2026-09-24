@@ -101,8 +101,6 @@ export function useRestaurantData(slug: string | undefined): UseRestaurantDataRe
         username: r.slug,
         bio: r.bio ?? "",
         posts: dishes.length,
-        followers: "—",
-        following: 0,
         whatsappLink: r.whatsapp_link ?? "",
         instagramLink: r.instagram_link ?? "",
         address: r.address ?? undefined,
