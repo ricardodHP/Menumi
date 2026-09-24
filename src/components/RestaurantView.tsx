@@ -21,9 +21,10 @@ interface RestaurantViewProps {
   restaurant: RestaurantInfo;
   categories: Category[];
   dishes: Dish[];
+  isPreview?: boolean;
 }
 
-const RestaurantView = ({ restaurant, categories, dishes }: RestaurantViewProps) => {
+const RestaurantView = ({ restaurant, categories, dishes, isPreview = false }: RestaurantViewProps) => {
   const [activeCategory, setActiveCategory] = useState<string | null>("populares");
   const [feedOpen, setFeedOpen] = useState(false);
   const [feedStartIndex, setFeedStartIndex] = useState(0);
@@ -112,7 +113,7 @@ const RestaurantView = ({ restaurant, categories, dishes }: RestaurantViewProps)
 
   const handleCategoryClick = (categoryId: string) => {
     setActiveCategory(activeCategory === categoryId ? null : categoryId);
-    if (categoryId !== "populares" && activeCategory !== categoryId) {
+    if (!isPreview && categoryId !== "populares" && activeCategory !== categoryId) {
       trackEvent({
         restaurantId: restaurant.id,
         eventType: "category_view",
@@ -160,7 +161,7 @@ const RestaurantView = ({ restaurant, categories, dishes }: RestaurantViewProps)
           <Link to={accountHref} className="text-foreground" aria-label={user ? "Mi cuenta" : "Iniciar sesión"}>
             <User className="w-5 h-5" />
           </Link>
-          {avgRating && (
+          {avgRating && !isPreview && (
             <button
               onClick={() => setRestaurantReviewsOpen(true)}
               className="flex items-center gap-1 text-accent hover:opacity-80 transition-opacity"
@@ -251,13 +252,14 @@ const RestaurantView = ({ restaurant, categories, dishes }: RestaurantViewProps)
           headerTitle={activeCategoryName ?? restaurant.username}
           onClose={() => setFeedOpen(false)}
           onReviewSubmitted={handleReviewSubmitted}
+          isPreview={isPreview}
         />
       )}
       <AssistantFloatingButton onClick={() => setAssistantOpen(true)} used={assistantOpen} />
       <AssistantModal open={assistantOpen} onClose={() => setAssistantOpen(false)} dishes={dishes} />
       <CartFloatingButton />
       <CartModal />
-      {restaurant.showRating && (
+      {restaurant.showRating && !isPreview && (
         <ReviewsModal
           open={restaurantReviewsOpen}
           onClose={() => setRestaurantReviewsOpen(false)}

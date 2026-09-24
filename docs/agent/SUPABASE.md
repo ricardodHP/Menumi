@@ -99,6 +99,7 @@ Incluyen:
 - emoji;
 - image_url;
 - position.
+- is_visible.
 
 Owner/admin escriben según políticas existentes.
 

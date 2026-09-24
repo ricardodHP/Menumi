@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -32,6 +33,7 @@ interface CategoryRow {
   name: string;
   emoji: string | null;
   position: number;
+  is_visible: boolean;
 }
 
 export default function DashboardCategories() {
@@ -49,7 +51,7 @@ export default function DashboardCategories() {
     setLoading(true);
     const { data, error } = await supabase
       .from("categories")
-      .select("id, name, emoji, position")
+      .select("id, name, emoji, position, is_visible")
       .eq("restaurant_id", restaurant.id)
       .order("position", { ascending: true });
     if (error) toast.error(error.message);
@@ -115,6 +117,18 @@ export default function DashboardCategories() {
     }
   };
 
+  const toggleVisible = async (category: CategoryRow) => {
+    const { error } = await supabase
+      .from("categories")
+      .update({ is_visible: !category.is_visible })
+      .eq("id", category.id);
+    if (error) toast.error(error.message);
+    else {
+      toast.success(category.is_visible ? "Categoría oculta" : "Categoría visible");
+      load();
+    }
+  };
+
   const move = async (idx: number, dir: -1 | 1) => {
     const target = idx + dir;
     if (target < 0 || target >= items.length) return;
@@ -175,9 +189,21 @@ export default function DashboardCategories() {
                 <div className="text-2xl w-10 text-center">{c.emoji ?? "🍽️"}</div>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium truncate">{c.name}</p>
-                  <p className="text-xs text-muted-foreground">Posición {c.position}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Posición {c.position} · {c.is_visible ? "Visible" : "Oculta"}
+                  </p>
                 </div>
                 <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-2 px-2">
+                    <Label htmlFor={`visible-${c.id}`} className="text-xs cursor-pointer">
+                      Visible en el menú
+                    </Label>
+                    <Switch
+                      id={`visible-${c.id}`}
+                      checked={c.is_visible}
+                      onCheckedChange={() => toggleVisible(c)}
+                    />
+                  </div>
                   <Button variant="ghost" size="icon" onClick={() => move(idx, -1)} disabled={idx === 0}>
                     <ArrowUp className="h-4 w-4" />
                   </Button>

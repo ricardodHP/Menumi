@@ -94,7 +94,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 aria-label={isPublished ? "Despublicar" : "Publicar"}
               >
                 {isPublished && <CheckCircle2 className="h-3.5 w-3.5" />}
-                {isPublished ? "Publicado" : "¿Publicar?"}
+                {isPublished ? "Publicado" : "Borrador"}
               </button>
             )}
             <Sheet open={menuOpen} onOpenChange={setMenuOpen}>

@@ -24,6 +24,12 @@ El tracking se realiza desde frontend mediante:
 
 La función `trackEvent` es best-effort y no debe bloquear la UX principal.
 
+## Exclusión de preview
+
+El menú abierto con `/r/:slug?preview=1` es una vista de inspección para el owner/admin y no registra eventos públicos `view`, `cart_add` ni `category_view`. La interacción visual y el carrito pueden seguir funcionando, pero no deben inflar las métricas del menú publicado.
+
+El menú publicado sin `preview=1` conserva el tracking actual.
+
 ## Semántica actual de eventos
 
 ### view

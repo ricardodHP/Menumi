@@ -15,9 +15,18 @@ interface DishFeedProps {
   headerTitle?: string;
   onClose: () => void;
   onReviewSubmitted?: () => void;
+  isPreview?: boolean;
 }
 
-const DishFeed = ({ dishes, startIndex, restaurant, headerTitle, onClose, onReviewSubmitted }: DishFeedProps) => {
+const DishFeed = ({
+  dishes,
+  startIndex,
+  restaurant,
+  headerTitle,
+  onClose,
+  onReviewSubmitted,
+  isPreview = false,
+}: DishFeedProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const { addItem, items } = useCart();
   const { toggleLike, isLiked } = useLikes();
@@ -34,7 +43,7 @@ const DishFeed = ({ dishes, startIndex, restaurant, headerTitle, onClose, onRevi
     const last = lastTapRef.current[dish.id] || 0;
     if (now - last < 300) {
       // Double tap → like
-      if (!isLiked(dish.id)) toggleLike(dish.id);
+      if (!isPreview && !isLiked(dish.id)) toggleLike(dish.id);
       setHeartAnimation(dish.id);
       setTimeout(() => setHeartAnimation(null), 800);
       lastTapRef.current[dish.id] = 0;
@@ -51,7 +60,7 @@ const DishFeed = ({ dishes, startIndex, restaurant, headerTitle, onClose, onRevi
         singleTapTimerRef.current[dish.id] = null;
       }, 280);
     }
-  }, [isLiked, toggleLike]);
+  }, [isLiked, isPreview, toggleLike]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -81,11 +90,11 @@ const DishFeed = ({ dishes, startIndex, restaurant, headerTitle, onClose, onRevi
   // Track view per dish (once per session)
   useEffect(() => {
     const dish = dishes[startIndex];
-    if (dish && !trackedRef.current.has(dish.id)) {
+    if (!isPreview && dish && !trackedRef.current.has(dish.id)) {
       trackedRef.current.add(dish.id);
       trackEvent({ restaurantId: restaurant.id, eventType: "view", dishId: dish.id });
     }
-  }, [startIndex, dishes, restaurant.id]);
+  }, [startIndex, dishes, restaurant.id, isPreview]);
 
   return (
     <div className="fixed inset-0 z-50 bg-background">
@@ -129,11 +138,21 @@ const DishFeed = ({ dishes, startIndex, restaurant, headerTitle, onClose, onRevi
             {/* Action bar */}
             <div className="flex items-center justify-between px-4 py-2">
               <div className="flex items-center gap-4">
-                <button onClick={() => toggleLike(dish.id)} className="active:scale-125 transition-transform" aria-label="Me gusta">
+                <button
+                  onClick={() => {
+                    if (!isPreview) toggleLike(dish.id);
+                  }}
+                  disabled={isPreview}
+                  className="active:scale-125 transition-transform"
+                  aria-label="Me gusta"
+                >
                   <Heart className={`w-6 h-6 transition-colors ${isLiked(dish.id) ? "text-red-500 fill-red-500" : "text-foreground"}`} />
                 </button>
                 <button
-                  onClick={() => setReviewsForDish(dish)}
+                  onClick={() => {
+                    if (!isPreview) setReviewsForDish(dish);
+                  }}
+                  disabled={isPreview}
                   className="relative active:scale-125 transition-transform"
                   aria-label="Ver comentarios"
                 >
@@ -147,7 +166,9 @@ const DishFeed = ({ dishes, startIndex, restaurant, headerTitle, onClose, onRevi
                 <button
                   onClick={() => {
                     addItem(dish);
-                    trackEvent({ restaurantId: restaurant.id, eventType: "cart_add", dishId: dish.id });
+                    if (!isPreview) {
+                      trackEvent({ restaurantId: restaurant.id, eventType: "cart_add", dishId: dish.id });
+                    }
                   }}
                   className="flex items-center gap-1.5 bg-primary text-primary-foreground text-xs font-semibold px-3 py-1.5 rounded-full hover:opacity-90 transition-opacity active:scale-95"
                 >
@@ -181,7 +202,10 @@ const DishFeed = ({ dishes, startIndex, restaurant, headerTitle, onClose, onRevi
               </div>
               {dish.showRating && (
                 <button
-                  onClick={() => setReviewsForDish(dish)}
+                  onClick={() => {
+                    if (!isPreview) setReviewsForDish(dish);
+                  }}
+                  disabled={isPreview}
                   className="flex items-center gap-1 hover:opacity-80 transition-opacity"
                   aria-label="Ver y dejar reseñas"
                 >
@@ -257,7 +281,7 @@ const DishFeed = ({ dishes, startIndex, restaurant, headerTitle, onClose, onRevi
         </div>
       )}
 
-      {reviewsForDish && (
+      {reviewsForDish && !isPreview && (
         <ReviewsModal
           open={!!reviewsForDish}
           onClose={() => setReviewsForDish(null)}

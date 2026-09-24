@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Category, Dish, RestaurantInfo } from "@/data/restaurant";
+import { filterPublicMenuRecords } from "@/lib/restaurant-public";
 
 const FALLBACK_DISH = "/seed/dishes/tacos-pastor.jpg";
 const FALLBACK_LOGO = "/seed/restaurant-logo.png";
@@ -15,9 +16,14 @@ interface UseRestaurantDataResult {
 
 /**
  * Loads a restaurant + categories + dishes by slug.
- * If `previewMode` is true, also loads draft restaurants (for /dashboard/preview).
+ * Preview mode allows the owner/admin RLS path to inspect a draft without making
+ * the regular `/r/:slug` route public.
  */
-export function useRestaurantData(slug: string | undefined): UseRestaurantDataResult {
+export function useRestaurantData(
+  slug: string | undefined,
+  options: { preview?: boolean } = {},
+): UseRestaurantDataResult {
+  const preview = options.preview ?? false;
   const [state, setState] = useState<UseRestaurantDataResult>({
     loading: true,
     notFound: false,
@@ -35,14 +41,16 @@ export function useRestaurantData(slug: string | undefined): UseRestaurantDataRe
       }
       setState((s) => ({ ...s, loading: true }));
 
-      const { data: r, error: rErr } = await supabase
+      const restaurantQuery = supabase
         .from("restaurants")
         .select("*")
-        .eq("slug", slug)
-        .maybeSingle();
+        .eq("slug", slug);
+      const { data: r, error: rErr } = preview
+        ? await restaurantQuery.maybeSingle()
+        : await restaurantQuery.eq("status", "published").maybeSingle();
 
       if (cancelled) return;
-      if (rErr || !r) {
+      if (rErr || !r || (!preview && r.status !== "published")) {
         setState({ loading: false, notFound: true, restaurant: null, categories: [], dishes: [] });
         return;
       }
@@ -50,7 +58,7 @@ export function useRestaurantData(slug: string | undefined): UseRestaurantDataRe
       const [cRes, dRes] = await Promise.all([
         supabase
           .from("categories")
-          .select("id, name, emoji, image_url, position")
+          .select("id, name, emoji, image_url, position, is_visible")
           .eq("restaurant_id", r.id)
           .order("position", { ascending: true }),
         supabase
@@ -61,6 +69,8 @@ export function useRestaurantData(slug: string | undefined): UseRestaurantDataRe
           .order("position", { ascending: true }),
       ]);
       if (cancelled) return;
+
+      const publicContent = filterPublicMenuRecords(cRes.data ?? [], dRes.data ?? []);
 
       // Load review counts per dish (single query, then aggregate client-side)
       const reviewCounts: Record<string, number> = {};
@@ -74,14 +84,14 @@ export function useRestaurantData(slug: string | undefined): UseRestaurantDataRe
         if (id) reviewCounts[id] = (reviewCounts[id] ?? 0) + 1;
       });
 
-      const categories: Category[] = (cRes.data ?? []).map((c) => ({
+      const categories: Category[] = publicContent.categories.map((c) => ({
         id: c.id,
         name: c.name,
         emoji: c.emoji ?? "🍽️",
         image: c.image_url ?? FALLBACK_DISH,
       }));
 
-      const dishes: Dish[] = (dRes.data ?? []).map((d) => ({
+      const dishes: Dish[] = publicContent.dishes.map((d) => ({
         id: d.id,
         name: d.name,
         description: d.description ?? "",
@@ -117,7 +127,7 @@ export function useRestaurantData(slug: string | undefined): UseRestaurantDataRe
     return () => {
       cancelled = true;
     };
-  }, [slug]);
+  }, [slug, preview]);
 
   return state;
 }

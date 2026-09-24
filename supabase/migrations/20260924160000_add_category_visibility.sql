@@ -1,0 +1,2 @@
+ALTER TABLE public.categories
+  ADD COLUMN IF NOT EXISTS is_visible BOOLEAN NOT NULL DEFAULT true;

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useSearchParams } from "react-router-dom";
 import { useRestaurantData } from "@/hooks/useRestaurantData";
 import RestaurantView from "@/components/RestaurantView";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,9 @@ import TableOrdersDrawer from "@/components/TableOrdersDrawer";
 
 export default function RestaurantPublic() {
   const { slug } = useParams<{ slug: string }>();
-  const { loading, notFound, restaurant, categories, dishes } = useRestaurantData(slug);
+  const [searchParams] = useSearchParams();
+  const preview = searchParams.get("preview") === "1";
+  const { loading, notFound, restaurant, categories, dishes } = useRestaurantData(slug, { preview });
   const { session, leave } = useTableSession();
   const [ordersOpen, setOrdersOpen] = useState(false);
 
@@ -39,6 +41,14 @@ export default function RestaurantPublic() {
 
   return (
     <>
+      {preview && (
+        <div
+          role="status"
+          className="sticky top-0 z-40 bg-amber-100 text-amber-950 text-xs px-3 py-2 text-center"
+        >
+          Vista previa: este menú no está publicado todavía.
+        </div>
+      )}
       {showBanner && (
         <div className="sticky top-0 z-40 bg-primary text-primary-foreground text-xs px-3 py-2 flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 min-w-0">
@@ -64,7 +74,12 @@ export default function RestaurantPublic() {
           </div>
         </div>
       )}
-      <RestaurantView restaurant={restaurant} categories={categories} dishes={dishes} />
+      <RestaurantView
+        restaurant={restaurant}
+        categories={categories}
+        dishes={dishes}
+        isPreview={preview}
+      />
       {showBanner && (
         <TableOrdersDrawer
           open={ordersOpen}

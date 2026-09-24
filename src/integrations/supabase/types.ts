@@ -20,6 +20,7 @@ export type Database = {
           emoji: string | null
           id: string
           image_url: string | null
+          is_visible: boolean
           name: string
           position: number
           restaurant_id: string
@@ -29,6 +30,7 @@ export type Database = {
           emoji?: string | null
           id?: string
           image_url?: string | null
+          is_visible?: boolean
           name: string
           position?: number
           restaurant_id: string
@@ -38,6 +40,7 @@ export type Database = {
           emoji?: string | null
           id?: string
           image_url?: string | null
+          is_visible?: boolean
           name?: string
           position?: number
           restaurant_id?: string

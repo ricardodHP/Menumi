@@ -21,9 +21,9 @@ import { ExternalLink, Upload, Eye, QrCode } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { Database } from "@/integrations/supabase/types";
 import QrCodeModal from "@/components/QrCodeModal";
+import { getRestaurantPublicPath, getRestaurantPublicUrl } from "@/lib/restaurant-public";
 
 type CuisineTemplate = Database["public"]["Enums"]["cuisine_template"];
-type RestaurantStatus = Database["public"]["Enums"]["restaurant_status"];
 
 const TEMPLATES: { value: CuisineTemplate; label: string }[] = [
   { value: "generic", label: "Genérica" },
@@ -46,7 +46,6 @@ export default function DashboardHome() {
     cuisine_template: "generic" as CuisineTemplate,
     show_by_rating: false,
     show_rating: true,
-    status: "draft" as RestaurantStatus,
     logo_url: "" as string | null,
   });
   const [saving, setSaving] = useState(false);
@@ -66,7 +65,6 @@ export default function DashboardHome() {
       cuisine_template: restaurant.cuisine_template,
       show_by_rating: restaurant.show_by_rating,
       show_rating: (restaurant as { show_rating?: boolean }).show_rating ?? true,
-      status: restaurant.status,
       logo_url: restaurant.logo_url,
     });
   }, [restaurant]);
@@ -87,7 +85,6 @@ export default function DashboardHome() {
         cuisine_template: form.cuisine_template,
         show_by_rating: form.show_by_rating,
         show_rating: form.show_rating,
-        status: form.status,
         logo_url: form.logo_url,
       })
       .eq("id", restaurant.id);
@@ -140,12 +137,15 @@ export default function DashboardHome() {
     );
   }
 
+  const publicPath = getRestaurantPublicPath(restaurant.slug);
+  const publicUrl = getRestaurantPublicUrl(restaurant.slug, window.location.origin);
+
   return (
     <DashboardLayout>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
         <Button asChild variant="outline" className="rounded-full h-11">
-          <Link to={`/r/${restaurant.slug}`} target="_blank">
-            <Eye className="h-4 w-4" /> Preview
+          <Link to={`${publicPath}?preview=1`} target="_blank">
+            <Eye className="h-4 w-4" /> Vista previa
           </Link>
         </Button>
         <Button variant="outline" className="rounded-full h-11" onClick={() => setQrOpen(true)}>
@@ -298,8 +298,8 @@ export default function DashboardHome() {
 
           <div className="text-xs text-muted-foreground">
             URL pública:{" "}
-            <Link to={`/r/${restaurant.slug}`} target="_blank" className="text-primary inline-flex items-center gap-1">
-              /r/{restaurant.slug} <ExternalLink className="h-3 w-3" />
+            <Link to={publicPath} target="_blank" className="text-primary inline-flex items-center gap-1">
+              {publicUrl} <ExternalLink className="h-3 w-3" />
             </Link>
           </div>
 
@@ -314,7 +314,7 @@ export default function DashboardHome() {
       <QrCodeModal
         open={qrOpen}
         onOpenChange={setQrOpen}
-        url={`${window.location.origin}/r/${restaurant.slug}`}
+        url={publicUrl}
         restaurantName={restaurant.name}
         logoUrl={form.logo_url}
       />
