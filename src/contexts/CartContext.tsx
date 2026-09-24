@@ -1,6 +1,12 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { type Dish } from "@/data/restaurant";
+import {
+  hydrateSelection,
+  readSelection,
+  serializeSelection,
+  writeSelection,
+} from "@/lib/cart-selection";
 
 export interface CartItem {
   dish: Dish;
@@ -26,6 +32,13 @@ interface CartContextType {
   totalPrice: number;
   isCartOpen: boolean;
   setIsCartOpen: (open: boolean) => void;
+  setRestaurantScope: (
+    restaurantId: string,
+    dishes: readonly Dish[],
+    options?: { persist?: boolean },
+  ) => void;
+  selectionNote: string;
+  setSelectionNote: (note: string) => void;
 
   // Shared cart
   shared: SharedCartInfo | null;
@@ -76,14 +89,83 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [shared, setShared] = useState<SharedCartInfo | null>(null);
+  const [selectionNote, setSelectionNoteState] = useState("");
+  const [restaurantScope, setRestaurantScopeState] = useState<{
+    restaurantId: string;
+    dishes: readonly Dish[];
+    persist: boolean;
+  } | null>(null);
+  const restaurantScopeRef = useRef<typeof restaurantScope>(null);
+  const sharedRef = useRef<SharedCartInfo | null>(null);
   const dishResolverRef = useRef<(id: string) => Dish | undefined>(() => undefined);
+
+  const setSharedCart = useCallback((next: SharedCartInfo | null) => {
+    sharedRef.current = next;
+    setShared(next);
+  }, []);
 
   const setDishResolver = useCallback((fn: (id: string) => Dish | undefined) => {
     dishResolverRef.current = fn;
   }, []);
 
+  const setRestaurantScope = useCallback(
+    (
+      restaurantId: string,
+      dishes: readonly Dish[],
+      options: { persist?: boolean } = {},
+    ) => {
+      const nextScope = {
+        restaurantId,
+        dishes,
+        persist: options.persist ?? true,
+      };
+      restaurantScopeRef.current = nextScope;
+      setRestaurantScopeState(nextScope);
+      dishResolverRef.current = (id) => dishes.find((dish) => dish.id === id);
+
+      if (!nextScope.persist) {
+        if (sharedRef.current) setSharedCart(null);
+        setItems([]);
+        setSelectionNoteState("");
+        setIsCartOpen(false);
+        return;
+      }
+
+      // Shared cart state has its own lifecycle and must keep working as-is.
+      // Local selection hydration is skipped while that mode is active.
+      if (sharedRef.current) return;
+
+      const hydrated = hydrateSelection(readSelection(restaurantId), dishes);
+      setItems(hydrated.items);
+      setSelectionNoteState(hydrated.items.length > 0 ? hydrated.note : "");
+      setIsCartOpen(false);
+    },
+    [setSharedCart],
+  );
+
+  const setSelectionNote = useCallback((note: string) => {
+    setSelectionNoteState(note.slice(0, 500));
+  }, []);
+
+  useEffect(() => {
+    if (!shared && items.length === 0 && selectionNote) {
+      setSelectionNoteState("");
+    }
+  }, [items.length, selectionNote, shared]);
+
+  useEffect(() => {
+    if (!restaurantScope?.persist || shared) return;
+    writeSelection(
+      restaurantScope.restaurantId,
+      serializeSelection(items, items.length > 0 ? selectionNote : ""),
+    );
+  }, [items, restaurantScope, selectionNote, shared]);
+
   // ---------- Local mode mutations ----------
   const addItemLocal = useCallback((dish: Dish) => {
+    const currentDish = restaurantScopeRef.current?.dishes.find((item) => item.id === dish.id);
+    if (!currentDish) return;
+
     setItems((prev) => {
       const existing = prev.find((i) => i.dish.id === dish.id);
       if (existing) {
@@ -91,16 +173,17 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           i.dish.id === dish.id ? { ...i, quantity: i.quantity + 1 } : i
         );
       }
-      return [...prev, { dish, quantity: 1 }];
+      return [...prev, { dish: currentDish, quantity: 1 }];
     });
   }, []);
 
   const updateQuantityLocal = useCallback((dishId: string, quantity: number) => {
-    if (quantity <= 0) {
+    const normalizedQuantity = Number.isFinite(quantity) ? Math.floor(quantity) : 0;
+    if (normalizedQuantity <= 0) {
       setItems((prev) => prev.filter((i) => i.dish.id !== dishId));
     } else {
       setItems((prev) =>
-        prev.map((i) => (i.dish.id === dishId ? { ...i, quantity } : i))
+        prev.map((i) => (i.dish.id === dishId ? { ...i, quantity: normalizedQuantity } : i))
       );
     }
   }, []);
@@ -109,7 +192,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     setItems((prev) => prev.filter((i) => i.dish.id !== dishId));
   }, []);
 
-  const clearCartLocal = useCallback(() => setItems([]), []);
+  const clearCartLocal = useCallback(() => {
+    setItems([]);
+    setSelectionNoteState("");
+  }, []);
 
   // ---------- Shared mode helpers ----------
   const refreshSharedItems = useCallback(async (cartId: string) => {
@@ -254,9 +340,9 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       await supabase.from("shared_cart_items").insert(rows);
     }
 
-    setShared({ code, cartId, role: "host", hostName: displayName });
+    setSharedCart({ code, cartId, role: "host", hostName: displayName });
     return code;
-  }, [items]);
+  }, [items, setSharedCart]);
 
   const joinSharedCart = useCallback(async (code: string, displayName: string): Promise<boolean> => {
     setStoredName(displayName);
@@ -267,14 +353,14 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       .maybeSingle();
     if (error || !data) return false;
     setItems([]); // discard local cart; we'll load the shared one
-    setShared({ code: data.code, cartId: data.id, role: "guest", hostName: data.host_name ?? undefined });
+    setSharedCart({ code: data.code, cartId: data.id, role: "guest", hostName: data.host_name ?? undefined });
     return true;
-  }, []);
+  }, [setSharedCart]);
 
   const leaveSharedCart = useCallback(() => {
-    setShared(null);
+    setSharedCart(null);
     setItems([]);
-  }, []);
+  }, [setSharedCart]);
 
   const totalItems = items.reduce((sum, i) => sum + i.quantity, 0);
   const totalPrice = items.reduce((sum, i) => sum + i.dish.price * i.quantity, 0);
@@ -294,6 +380,9 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         totalPrice,
         isCartOpen,
         setIsCartOpen,
+        setRestaurantScope,
+        selectionNote,
+        setSelectionNote,
         shared,
         setDishResolver,
         createSharedCart,

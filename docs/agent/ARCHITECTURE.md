@@ -162,6 +162,9 @@ No usarlo como sustituto de RLS.
 Responsable de:
 
 - carrito local;
+- selección local persistida por `restaurant.id` en `localStorage` usando solo IDs, cantidades y nota general;
+- rehidratación contra el catálogo público actual, descartando platillos stale;
+- selección efímera sin persistencia para preview;
 - cantidades;
 - total;
 - apertura del carrito;
@@ -245,6 +248,8 @@ Flujo principal:
 - reseñas;
 - templates;
 - tracking.
+
+`CartModal` en el menú público se limita a revisar la selección local y el carrito compartido. No consulta sesiones de mesa ni envía pedidos; los flujos de mesa y pedidos permanecen congelados en sus rutas/componentes existentes y no son alcanzables desde `/r/:slug`.
 
 Consulta `MENU_PUBLIC.md` antes de modificar este flujo de forma transversal.
 

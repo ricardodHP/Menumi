@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect, type CSSProperties } from "react";
+import { useState, useMemo, useCallback, useEffect, useLayoutEffect, type CSSProperties } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useCart, getStoredName } from "@/contexts/CartContext";
 import { toast } from "sonner";
@@ -37,13 +37,12 @@ const RestaurantView = ({ restaurant, categories, dishes, isPreview = false }: R
   const { user, roles } = useAuth();
   const accountHref = user ? getDefaultRouteForRoles(roles) : "/login";
   const [searchParams, setSearchParams] = useSearchParams();
-  const { setDishResolver, joinSharedCart, shared } = useCart();
+  const { setRestaurantScope, joinSharedCart, shared } = useCart();
 
   // Register a resolver so the shared cart can map dish_id → Dish.
-  useEffect(() => {
-    const map = new Map(dishes.map((d) => [d.id, d]));
-    setDishResolver((id) => map.get(id));
-  }, [dishes, setDishResolver]);
+  useLayoutEffect(() => {
+    setRestaurantScope(restaurant.id, dishes, { persist: !isPreview });
+  }, [dishes, isPreview, restaurant.id, setRestaurantScope]);
 
   // Handle ?dish=<id> deep link: open the feed centered on that dish.
   useEffect(() => {
@@ -63,6 +62,14 @@ const RestaurantView = ({ restaurant, categories, dishes, isPreview = false }: R
   // Handle ?group=<code> deep link: join the shared cart.
   useEffect(() => {
     const code = searchParams.get("group");
+    if (isPreview) {
+      if (code) {
+        const next = new URLSearchParams(searchParams);
+        next.delete("group");
+        setSearchParams(next, { replace: true });
+      }
+      return;
+    }
     if (!code || shared) return;
     const stored = getStoredName();
     const name = stored ?? window.prompt("Tu nombre para el carrito compartido:", "")?.trim() ?? "";
@@ -81,7 +88,7 @@ const RestaurantView = ({ restaurant, categories, dishes, isPreview = false }: R
       setSearchParams(next, { replace: true });
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams.get("group")]);
+  }, [isPreview, searchParams.get("group")]);
 
 
   const tpl = getTemplateStyles(restaurant.cuisineTemplate);
@@ -258,7 +265,7 @@ const RestaurantView = ({ restaurant, categories, dishes, isPreview = false }: R
       <AssistantFloatingButton onClick={() => setAssistantOpen(true)} used={assistantOpen} />
       <AssistantModal open={assistantOpen} onClose={() => setAssistantOpen(false)} dishes={dishes} />
       <CartFloatingButton />
-      <CartModal />
+      <CartModal isPreview={isPreview} />
       {restaurant.showRating && !isPreview && (
         <ReviewsModal
           open={restaurantReviewsOpen}

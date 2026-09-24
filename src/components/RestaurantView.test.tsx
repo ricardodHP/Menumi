@@ -18,6 +18,7 @@ vi.mock("@/contexts/AuthContext", () => ({
 vi.mock("@/contexts/CartContext", () => ({
   useCart: () => ({
     setDishResolver: vi.fn(),
+    setRestaurantScope: vi.fn(),
     joinSharedCart: vi.fn(),
     shared: null,
   }),

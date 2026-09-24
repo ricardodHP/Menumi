@@ -1,4 +1,4 @@
-import { X, Minus, Plus, Trash2, ShoppingBag, MessageCircle, Users, LogOut, Share2, Send, Loader2 } from "lucide-react";
+import { X, Minus, Plus, Trash2, ShoppingBag, MessageCircle, Users, LogOut, Share2 } from "lucide-react";
 import { useCart, getStoredName } from "@/contexts/CartContext";
 import { Button } from "@/components/ui/button";
 import { useEffect, useMemo, useState } from "react";
@@ -7,47 +7,23 @@ import { useRestaurantData } from "@/hooks/useRestaurantData";
 import { toast } from "sonner";
 import SharedCartQrModal from "./SharedCartQrModal";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { useTableSession } from "@/hooks/useTableSession";
-import { getOrCreateDeviceId } from "@/lib/device";
-import { supabase } from "@/integrations/supabase/client";
+import { formatCurrency } from "@/lib/currency";
 
-const CartModal = () => {
+interface CartModalProps {
+  isPreview?: boolean;
+}
+
+const CartModal = ({ isPreview = false }: CartModalProps) => {
   const {
-    items, updateQuantity, removeItem, clearCart, totalItems, totalPrice,
+    items, updateQuantity, clearCart, totalItems, totalPrice,
     isCartOpen, setIsCartOpen,
     shared, createSharedCart, leaveSharedCart, participants,
+    selectionNote, setSelectionNote,
   } = useCart();
   const { slug } = useParams<{ slug: string }>();
   const { restaurant } = useRestaurantData(slug);
   const [creating, setCreating] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
-  const [sending, setSending] = useState(false);
-  const { session: tableSession } = useTableSession();
-  const inTable = !!tableSession && tableSession.restaurant_slug === slug;
-
-  const sendToTable = async () => {
-    if (!tableSession || items.length === 0) return;
-    setSending(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("order-create", {
-        body: {
-          code: tableSession.code,
-          device_id: getOrCreateDeviceId(),
-          items: items.map((i) => ({ dish_id: i.dish.id, quantity: i.quantity })),
-        },
-      });
-      if (error || (data as { error?: string })?.error) {
-        throw new Error((data as { error?: string })?.error ?? error?.message ?? "Error");
-      }
-      clearCart();
-      setIsCartOpen(false);
-      toast.success("Pedido enviado. El mesero ya lo ve.");
-    } catch (e) {
-      toast.error((e as Error).message);
-    } finally {
-      setSending(false);
-    }
-  };
 
   const shareUrl = useMemo(() => {
     if (!shared || !restaurant) return "";
@@ -66,6 +42,7 @@ const CartModal = () => {
   if (!isCartOpen) return null;
 
   const handleCreateShared = async () => {
+    if (isPreview) return;
     if (!restaurant) {
       toast.error("Restaurante no disponible");
       return;
@@ -108,7 +85,7 @@ const CartModal = () => {
           <div className="flex items-center gap-2">
             <ShoppingBag className="w-5 h-5 text-primary" />
             <h3 className="text-base font-bold text-foreground">
-              {shared ? "Carrito grupal" : "Mi Orden"} ({totalItems})
+              {shared ? "Carrito grupal" : "Mi pedido"} ({totalItems})
             </h3>
           </div>
           <div className="flex items-center gap-2">
@@ -170,8 +147,19 @@ const CartModal = () => {
           {items.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
               <ShoppingBag className="w-12 h-12 mb-3 opacity-30" />
-              <p className="text-sm font-medium">Tu orden está vacía</p>
-              <p className="text-xs mt-1">Agrega platillos para comenzar</p>
+              <p className="text-sm font-medium">
+                {shared ? "Aún no hay platillos en el pedido grupal." : "Aún no has agregado platillos."}
+              </p>
+              <p className="text-xs mt-1">Explora el menú para comenzar</p>
+              {!shared && (
+                <Button
+                  variant="outline"
+                  className="mt-4 h-9 text-xs"
+                  onClick={() => setIsCartOpen(false)}
+                >
+                  Seguir explorando
+                </Button>
+              )}
             </div>
           ) : shared ? (
             (() => {
@@ -197,12 +185,13 @@ const CartModal = () => {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-foreground truncate">{item.dish.name}</p>
                     <p className="text-sm font-bold text-primary">
-                      ${item.dish.price * item.quantity} MXN
+                      {formatCurrency(item.dish.price * item.quantity)}
                     </p>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
                     <button
                       onClick={() => updateQuantity(item.dish.id, item.quantity - 1)}
+                      aria-label={`${item.quantity === 1 ? "Eliminar" : "Disminuir"} ${item.dish.name}`}
                       className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center text-foreground hover:bg-muted transition-colors"
                     >
                       {item.quantity === 1 ? (
@@ -216,6 +205,7 @@ const CartModal = () => {
                     </span>
                     <button
                       onClick={() => updateQuantity(item.dish.id, item.quantity + 1)}
+                      aria-label={`Aumentar ${item.dish.name}`}
                       className="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-primary-foreground hover:opacity-90 transition-opacity"
                     >
                       <Plus className="w-3.5 h-3.5" />
@@ -238,7 +228,7 @@ const CartModal = () => {
                         Tus platillos {myName ? `· ${myName}` : ""}
                       </p>
                       <span className="text-[11px] text-muted-foreground">
-                        {groupCount(mine)} · ${groupTotal(mine)} MXN
+                        {groupCount(mine)} · {formatCurrency(groupTotal(mine))}
                       </span>
                     </div>
                     {mine.length === 0 ? (
@@ -266,7 +256,7 @@ const CartModal = () => {
                                 </span>
                               </div>
                               <span className="text-[11px] text-muted-foreground shrink-0 ml-2">
-                                {groupCount(list)} · ${groupTotal(list)} MXN
+                                {groupCount(list)} · {formatCurrency(groupTotal(list))}
                               </span>
                             </div>
                           </AccordionTrigger>
@@ -292,12 +282,13 @@ const CartModal = () => {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-foreground truncate">{item.dish.name}</p>
                     <p className="text-sm font-bold text-primary">
-                      ${item.dish.price * item.quantity} MXN
+                      {formatCurrency(item.dish.price * item.quantity)}
                     </p>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
                     <button
                       onClick={() => updateQuantity(item.dish.id, item.quantity - 1)}
+                      aria-label={`${item.quantity === 1 ? "Eliminar" : "Disminuir"} ${item.dish.name}`}
                       className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center text-foreground hover:bg-muted transition-colors"
                     >
                       {item.quantity === 1 ? (
@@ -311,6 +302,7 @@ const CartModal = () => {
                     </span>
                     <button
                       onClick={() => updateQuantity(item.dish.id, item.quantity + 1)}
+                      aria-label={`Aumentar ${item.dish.name}`}
                       className="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-primary-foreground hover:opacity-90 transition-opacity"
                     >
                       <Plus className="w-3.5 h-3.5" />
@@ -325,33 +317,28 @@ const CartModal = () => {
         {/* Footer */}
         {items.length > 0 && (
           <div className="border-t border-border px-4 py-3 shrink-0 space-y-3">
+            {!shared && (
+              <div className="space-y-1.5">
+                <label htmlFor="selection-note" className="text-xs font-medium text-foreground">
+                  Nota para tu selección (opcional)
+                </label>
+                <textarea
+                  id="selection-note"
+                  value={selectionNote}
+                  onChange={(event) => setSelectionNote(event.target.value)}
+                  placeholder="Ej. Sin cebolla"
+                  maxLength={500}
+                  rows={2}
+                  className="w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+            )}
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Total estimado</span>
-              <span className="text-lg font-bold text-foreground">${totalPrice} MXN</span>
+              <span className="text-sm text-muted-foreground">Total</span>
+              <span className="text-lg font-bold text-foreground">{formatCurrency(totalPrice)}</span>
             </div>
-            {inTable ? (
-              <Button
-                className="w-full h-11 text-sm font-semibold"
-                onClick={sendToTable}
-                disabled={sending}
-              >
-                {sending ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Send className="w-4 h-4 mr-2" />
-                )}
-                Enviar a la mesa ({tableSession?.table_label})
-              </Button>
-            ) : (
-              <>
-                <div className="flex gap-2">
-                  <Button
-                    className="flex-1 h-11 text-sm font-semibold"
-                    onClick={() => setIsCartOpen(false)}
-                  >
-                    <ShoppingBag className="w-4 h-4 mr-2" />
-                    Mostrar al mesero
-                  </Button>
+            <>
+              <div className="flex justify-end">
                   <Button
                     variant="outline"
                     className="h-11 px-4 text-sm font-semibold border-[#25D366] text-[#25D366] hover:bg-[#25D366]/10"
@@ -366,20 +353,19 @@ const CartModal = () => {
                     <MessageCircle className="w-4 h-4" />
                     WhatsApp
                   </Button>
-                </div>
-                {!shared && (
-                  <Button
-                    variant="secondary"
-                    className="w-full h-10 text-sm font-semibold"
-                    onClick={handleCreateShared}
-                    disabled={creating}
-                  >
-                    <Users className="w-4 h-4 mr-2" />
-                    {creating ? "Creando..." : "Compartir con amigos (carrito en vivo)"}
-                  </Button>
-                )}
-              </>
-            )}
+              </div>
+              {!shared && !isPreview && (
+                <Button
+                  variant="secondary"
+                  className="w-full h-10 text-sm font-semibold"
+                  onClick={handleCreateShared}
+                  disabled={creating}
+                >
+                  <Users className="w-4 h-4 mr-2" />
+                  {creating ? "Creando..." : "Compartir con amigos (carrito en vivo)"}
+                </Button>
+              )}
+            </>
           </div>
         )}
       </div>
