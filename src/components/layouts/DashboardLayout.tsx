@@ -79,7 +79,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <header className="border-b bg-card sticky top-0 z-40">
-        <div className="container mx-auto px-4 h-14 flex items-center justify-between gap-3">
+        <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0">
             <Store className="h-5 w-5 text-primary shrink-0" />
             <h1 className="font-semibold truncate">Mi restaurante</h1>
@@ -90,7 +90,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 onClick={() => setConfirmOpen(true)}
                 disabled={toggling}
                 className={cn(
-                  "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                  "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-xs font-medium transition-colors",
                   isPublished
                     ? "border-primary text-primary bg-primary/5 hover:bg-primary/10"
                     : "border-muted-foreground/30 text-muted-foreground hover:bg-muted",
@@ -149,7 +149,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           </div>
         </div>
       </header>
-      <main className="flex-1 container mx-auto px-4 py-6">{children}</main>
+      <main className="flex-1 w-full min-w-0 max-w-6xl mx-auto px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
+        {children}
+      </main>
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

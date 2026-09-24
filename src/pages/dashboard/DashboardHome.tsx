@@ -142,7 +142,7 @@ export default function DashboardHome() {
 
   return (
     <DashboardLayout>
-      <div className="grid grid-cols-2 gap-3 mb-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
         <Button asChild variant="outline" className="rounded-full h-11">
           <Link to={`/r/${restaurant.slug}`} target="_blank">
             <Eye className="h-4 w-4" /> Preview
@@ -152,7 +152,7 @@ export default function DashboardHome() {
           <QrCode className="h-4 w-4" /> Compartir QR
         </Button>
       </div>
-      <div className="mb-6">
+      <div className="mb-5 sm:mb-6">
         <h2 className="text-2xl font-bold">Información del restaurante</h2>
         <p className="text-sm text-muted-foreground">
           Edita los datos generales que verán tus clientes
@@ -160,8 +160,8 @@ export default function DashboardHome() {
       </div>
 
       <Card>
-        <CardContent className="p-6 space-y-5">
-          <div className="flex items-center gap-4">
+        <CardContent className="p-4 sm:p-6 space-y-5">
+          <div className="flex flex-wrap items-center gap-4">
             <div className="h-20 w-20 rounded-full bg-muted overflow-hidden flex items-center justify-center">
               {form.logo_url ? (
                 <img src={form.logo_url} alt="Logo" className="h-full w-full object-cover" />
@@ -169,7 +169,7 @@ export default function DashboardHome() {
                 <span className="text-xs text-muted-foreground">Sin logo</span>
               )}
             </div>
-            <div>
+            <div className="min-w-0">
               <Label htmlFor="logo" className="cursor-pointer">
                 <div className="inline-flex items-center gap-2 text-sm font-medium border rounded-md px-3 py-2 hover:bg-accent">
                   <Upload className="h-4 w-4" />
