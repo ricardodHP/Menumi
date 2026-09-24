@@ -26,3 +26,24 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+
+# Supabase CLI temporary state
+supabase/.temp/
+supabase/.branches/
+
+# Local security assessment artifacts
+strix_runs/
+SECURITY_CHECKLIST_*.md
+SECURITY.md
+
+# Superseded local product drafts
+IDEAS_DIFERENCIADOR.md
+
+# Locally installed third-party agent skills
+.agents/
+.codex/
+skills-lock.json
+.vercel
+.env*
+.superpowers/

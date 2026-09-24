@@ -36,7 +36,7 @@ const App = () => (
               <Toaster />
               <Sonner />
               <Routes>
-                <Route path="/" element={<Index />} />
+                <Route path="/" element={<Login />} />
                 <Route path="/r/:slug" element={<RestaurantPublic />} />
                 <Route path="/login" element={<Login />} />
                 {/* Public signup is disabled — admins create users from the panel */}

@@ -94,9 +94,9 @@ export default function Login() {
           <p className="text-xs text-center text-muted-foreground">
             ¿No tienes cuenta? Solicítala al administrador de la plataforma.
           </p>
-          <p className="text-xs text-center text-muted-foreground">
+          {/* <p className="text-xs text-center text-muted-foreground">
             <Link to="/" className="hover:underline">← Volver al menú</Link>
-          </p>
+          </p> */}
         </CardContent>
       </Card>
     </div>
