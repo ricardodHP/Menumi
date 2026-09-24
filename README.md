@@ -1,3 +1,3 @@
-# Welcome to your Lovable project
+# Culinary Feed
 
-TODO: Document your project here
+Digital menus for discovering restaurant dishes.

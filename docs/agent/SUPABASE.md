@@ -27,9 +27,7 @@ Variables públicas esperadas:
 
 Nunca usar `service_role` en frontend.
 
-El cliente usa `brokeredPreviewStorage()` para compatibilidad con previews de Lovable y fallback a almacenamiento local fuera de ese contexto.
-
-No simplificar esa integración incidentalmente.
+El cliente usa el almacenamiento estándar de Supabase Auth, persistiendo la sesión en el navegador.
 
 ## Tipos
 

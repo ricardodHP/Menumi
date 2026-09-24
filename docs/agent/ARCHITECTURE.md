@@ -344,7 +344,7 @@ No hardcodear decisiones visuales que rompan templates sin revisar este sistema.
 
 `src/integrations/supabase/types.ts` es generado.
 
-`src/integrations/supabase/client.ts` y `previewAuthStorage.ts` contienen integración específica de Supabase/Lovable.
+`src/integrations/supabase/client.ts` contiene la integración del frontend con Supabase.
 
 No tratarlos como archivos ordinarios de dominio.
 
