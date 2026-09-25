@@ -4,12 +4,16 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useManagedRestaurant } from "@/hooks/useManagedRestaurant";
 import { Button } from "@/components/ui/button";
-import { BarChart3, Eye, MessageCircle, ShoppingBag } from "lucide-react";
+import { BarChart3, Eye, MessageCircle, ShoppingBag, Target } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
+  analyzeDishOpportunities,
   aggregateDashboardEvents,
   fetchAllDashboardEventPages,
+  getTopDishRankings,
   getDashboardPeriod,
+  MIN_DISH_VIEW_SESSIONS_FOR_INSIGHT,
+  TOP_DISH_RANKING_LIMIT,
   type DashboardEvent,
   type DashboardRange,
 } from "@/lib/dashboard-statistics";
@@ -29,6 +33,12 @@ const rangeLabel: Record<DashboardRange, string> = {
   day: "Hoy",
   week: "Últimos 7 días",
   month: "Últimos 30 días",
+};
+
+const compactRangeLabel: Record<DashboardRange, string> = {
+  day: "Día",
+  week: "7 días",
+  month: "30 días",
 };
 
 export default function DashboardStats() {
@@ -66,7 +76,7 @@ export default function DashboardStats() {
             if (queryError) throw queryError;
             return (data ?? []) as DashboardEvent[];
           }),
-          supabase.from("dishes").select("id, name").eq("restaurant_id", restaurantId),
+          supabase.from("dishes").select("id, name").eq("restaurant_id", restaurantId).eq("is_active", true),
           supabase.from("categories").select("id, name, emoji").eq("restaurant_id", restaurantId),
         ]);
 
@@ -93,8 +103,12 @@ export default function DashboardStats() {
   }, [restaurant?.id, range, period, refreshKey]);
 
   const stats = useMemo(
-    () => aggregateDashboardEvents(events, restaurant?.id ?? "", period),
-    [events, restaurant?.id, period],
+    () => aggregateDashboardEvents(events, restaurant?.id ?? "", period, new Set(dishes.map((dish) => dish.id))),
+    [events, restaurant?.id, period, dishes],
+  );
+  const opportunities = useMemo(
+    () => analyzeDishOpportunities(stats.dishPerformance),
+    [stats.dishPerformance],
   );
   const dishById = useMemo(() => new Map(dishes.map((dish) => [dish.id, dish])), [dishes]);
   const categoryById = useMemo(
@@ -122,14 +136,14 @@ export default function DashboardStats() {
     );
   }
 
-  const viewedDishes = stats.viewedDishes
+  const viewedDishes = getTopDishRankings(stats.dishPerformance, "views")
     .map((entry) => ({ ...entry, dish: dishById.get(entry.dishId) }))
     .filter((entry) => entry.dish)
-    .slice(0, 5);
-  const addedDishes = stats.addedDishes
+    .slice(0, TOP_DISH_RANKING_LIMIT);
+  const addedDishes = getTopDishRankings(stats.dishPerformance, "adds")
     .map((entry) => ({ ...entry, dish: dishById.get(entry.dishId) }))
     .filter((entry) => entry.dish)
-    .slice(0, 5);
+    .slice(0, TOP_DISH_RANKING_LIMIT);
   const topCategories = stats.categories
     .map((entry) => ({ ...entry, category: categoryById.get(entry.categoryId) }))
     .filter((entry) => entry.category)
@@ -146,16 +160,18 @@ export default function DashboardStats() {
             Interacciones con tu menú — {rangeLabel[range].toLowerCase()}
           </p>
         </div>
-        <div className="flex gap-1 border rounded-md p-1">
+        <div className="grid w-full grid-cols-3 gap-1 rounded-md border p-1 sm:flex sm:w-auto">
           {(["day", "week", "month"] as DashboardRange[]).map((period) => (
             <Button
               key={period}
               size="sm"
               variant={range === period ? "default" : "ghost"}
               onClick={() => setRange(period)}
-              className="h-7 px-3 text-xs"
+              aria-pressed={range === period}
+              className="h-8 min-w-0 whitespace-nowrap px-2 text-xs sm:px-3"
             >
-              {rangeLabel[period]}
+              <span className="sm:hidden">{compactRangeLabel[period]}</span>
+              <span className="hidden sm:inline">{rangeLabel[period]}</span>
             </Button>
           ))}
         </div>
@@ -174,7 +190,7 @@ export default function DashboardStats() {
         </Card>
       ) : (
         <div className="space-y-6">
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
             <StatCard icon={<Eye className="h-4 w-4" />} label="Visitas al menú" value={stats.menuVisits} />
             <StatCard icon={<Eye className="h-4 w-4" />} label="Vistas a platillos" value={stats.dishViews} />
             <StatCard
@@ -197,21 +213,45 @@ export default function DashboardStats() {
             )}
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
+          {stats.activityEventCount === 0 && (
+            <p role="status" className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+              Aún no hay actividad suficiente para mostrar estadísticas en {rangeLabel[range].toLowerCase()}.
+            </p>
+          )}
+
+          <OpportunitiesCard
+            opportunities={opportunities.opportunities.map((opportunity) => ({
+              ...opportunity,
+              dish: dishById.get(opportunity.dishId),
+            })).filter((opportunity) => opportunity.dish)}
+            eligibleDishCount={opportunities.eligibleDishCount}
+            periodLabel={rangeLabel[range].toLowerCase()}
+          />
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <ListCard
-              title="Más vistos"
+              title="Platillos más vistos"
               icon={<Eye className="h-4 w-4" />}
               empty="Sin vistas en este período"
-              items={viewedDishes.map(({ dish, count, addRate }) => ({
+              items={viewedDishes.map(({ dish, views, adds, viewingSessions, viewingSessionsWithAdd, addRate }) => ({
                 name: dish!.name,
-                value: `${count} vistas${addRate === null ? "" : ` · ${Math.round(addRate)}% agregados`}`,
+                value: `${views} vistas · ${adds} agregados`,
+                detail: addRate === null
+                  ? "Sin sesiones únicas para calcular una tasa"
+                  : `${viewingSessionsWithAdd}/${viewingSessions} sesiones con vista y agregado · ${Math.round(addRate)}% tasa`,
               }))}
             />
             <ListCard
               title="Más agregados a Mi pedido"
               icon={<ShoppingBag className="h-4 w-4" />}
               empty="Sin agregados en este período"
-              items={addedDishes.map(({ dish, count }) => ({ name: dish!.name, value: `${count}` }))}
+              items={addedDishes.map(({ dish, adds, views, viewingSessions, addingSessions, viewingSessionsWithAdd, addRate }) => ({
+                name: dish!.name,
+                value: `${adds} agregados`,
+                detail: addRate === null
+                  ? `${addingSessions} sesiones agregaron · ${views} vistas · sin tasa de embudo`
+                  : `${addingSessions} sesiones agregaron · ${viewingSessionsWithAdd}/${viewingSessions} sesiones con vista y agregado · ${Math.round(addRate)}% tasa`,
+              }))}
             />
             <ListCard
               title="Categorías más vistas"
@@ -247,10 +287,11 @@ function StatCard({
   return (
     <Card>
       <CardContent className="p-4">
-        <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
-          {icon} {label}
+        <div className="mb-1 flex min-h-9 items-start gap-2 text-xs text-muted-foreground">
+          <span className="shrink-0">{icon}</span>
+          <span className="min-w-0 break-words leading-tight">{label}</span>
         </div>
-        <p className="text-2xl font-bold">{value.toLocaleString()}{suffix}</p>
+        <p className="text-xl font-bold sm:text-2xl">{value.toLocaleString()}{suffix}</p>
       </CardContent>
     </Card>
   );
@@ -264,7 +305,7 @@ function ListCard({
 }: {
   title: string;
   icon: React.ReactNode;
-  items: { name: string; value: string }[];
+  items: { name: string; value: string; detail?: string }[];
   empty: string;
 }) {
   return (
@@ -278,20 +319,87 @@ function ListCard({
         {items.length === 0 ? (
           <p className="text-xs text-muted-foreground py-2">{empty}</p>
         ) : (
-          <ol className="space-y-1.5">
+          <ol className="space-y-3">
             {items.map((item, index) => (
-              <li key={item.name} className="flex items-center justify-between text-sm gap-2">
-                <span className="flex items-center gap-2 min-w-0">
+              <li key={`${item.name}-${index}`} className="flex min-w-0 flex-col gap-1 text-sm sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+                <span className="flex min-w-0 items-start gap-2">
                   <Badge variant="outline" className="h-5 w-5 p-0 flex items-center justify-center text-[10px] shrink-0">
                     {index + 1}
                   </Badge>
-                  <span className="truncate">{item.name}</span>
+                  <span className="min-w-0">
+                    <span className="block break-words">{item.name}</span>
+                    {item.detail && <span className="block text-xs text-muted-foreground">{item.detail}</span>}
+                  </span>
                 </span>
-                <span className="font-semibold tabular-nums shrink-0">{item.value}</span>
+                <span className="pl-7 font-semibold tabular-nums sm:pl-0 sm:text-right">{item.value}</span>
               </li>
             ))}
           </ol>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function OpportunitiesCard({
+  opportunities,
+  eligibleDishCount,
+  periodLabel,
+}: {
+  opportunities: {
+    dishId: string;
+    kind: "many_views_few_adds" | "high_add_rate";
+    views: number;
+    adds: number;
+    addRate: number;
+    viewingSessions: number;
+    viewingSessionsWithAdd: number;
+    dish: DishMeta | undefined;
+  }[];
+  eligibleDishCount: number;
+  periodLabel: string;
+}) {
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+          <Target className="h-4 w-4" /> Oportunidades
+        </CardTitle>
+        <p className="text-xs text-muted-foreground">
+          Comparación relativa entre platillos con al menos {MIN_DISH_VIEW_SESSIONS_FOR_INSIGHT} sesiones únicas de vista en {periodLabel}.
+        </p>
+      </CardHeader>
+      <CardContent className="pt-0">
+        {opportunities.length === 0 ? (
+          <p className="py-2 text-sm text-muted-foreground">
+            {eligibleDishCount < 2
+              ? "Aún no hay suficientes datos para comparar: se requieren al menos dos platillos con la muestra mínima."
+              : "No aparecen diferencias claras entre platillos en este período."}
+          </p>
+        ) : (
+          <ol className="space-y-2">
+            {opportunities.map((opportunity) => (
+              <li key={opportunity.dishId} className="rounded-md border p-3">
+                <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="break-words text-sm font-semibold">{opportunity.dish!.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {opportunity.kind === "many_views_few_adds"
+                        ? "Muchas vistas, pocos agregados"
+                        : "Alta tasa de agregado"}
+                    </p>
+                  </div>
+                  <p className="text-xs tabular-nums text-muted-foreground sm:text-right">
+                    {opportunity.views} vistas · {opportunity.adds} agregados · {opportunity.viewingSessionsWithAdd}/{opportunity.viewingSessions} sesiones vieron y agregaron · {Math.round(opportunity.addRate)}% tasa
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        )}
+        <p className="mt-3 text-xs text-muted-foreground">
+          La tasa del embudo usa sesiones únicas con vista y agregado del mismo platillo ÷ sesiones únicas con vista. Describe interacción; no explica sus causas.
+        </p>
       </CardContent>
     </Card>
   );

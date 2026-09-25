@@ -21,6 +21,34 @@ export interface DashboardPeriod {
   until: string;
 }
 
+export const MIN_DISH_VIEW_SESSIONS_FOR_INSIGHT = 10;
+export const MIN_OPPORTUNITY_RATE_GAP_PERCENT = 10;
+export const MAX_DISH_OPPORTUNITIES = 3;
+export const TOP_DISH_RANKING_LIMIT = 5;
+
+export interface DishPerformance {
+  dishId: string;
+  views: number;
+  viewingSessions: number;
+  adds: number;
+  addingSessions: number;
+  viewingSessionsWithAdd: number;
+  addRate: number | null;
+}
+
+export type DishOpportunityKind = "many_views_few_adds" | "high_add_rate";
+
+export interface DishOpportunity {
+  dishId: string;
+  kind: DishOpportunityKind;
+  views: number;
+  adds: number;
+  addRate: number;
+  viewingSessions: number;
+  viewingSessionsWithAdd: number;
+  rateDifference: number;
+}
+
 export function getDashboardPeriod(range: DashboardRange, now = new Date()) {
   const since = new Date(now);
   since.setHours(0, 0, 0, 0);
@@ -46,6 +74,7 @@ export function aggregateDashboardEvents(
   events: DashboardEvent[],
   restaurantId: string,
   period?: DashboardPeriod,
+  activeDishIds?: ReadonlySet<string>,
 ) {
   const from = period ? new Date(period.since).getTime() : Number.NEGATIVE_INFINITY;
   const until = period ? new Date(period.until).getTime() : Number.POSITIVE_INFINITY;
@@ -97,24 +126,118 @@ export function aggregateDashboardEvents(
     }
   }
 
+  const dishPerformance: DishPerformance[] = [...new Set([
+    ...dishViewCounts.keys(),
+    ...dishSelectionCounts.keys(),
+  ])]
+    .filter((dishId) => !activeDishIds || activeDishIds.has(dishId))
+    .map((dishId) => {
+      const views = dishViewCounts.get(dishId) ?? 0;
+      const viewingSessionIds = dishViewSessions.get(dishId) ?? new Set<string>();
+      const viewingSessions = viewingSessionIds.size;
+      const adds = dishSelectionCounts.get(dishId) ?? 0;
+      const addingSessionIds = dishSelectionSessions.get(dishId) ?? new Set<string>();
+      const addingSessions = addingSessionIds.size;
+      let viewingSessionsWithAdd = 0;
+      for (const sessionId of addingSessionIds) {
+        if (viewingSessionIds.has(sessionId)) viewingSessionsWithAdd++;
+      }
+      return {
+        dishId,
+        views,
+        viewingSessions,
+        adds,
+        addingSessions,
+        viewingSessionsWithAdd,
+        addRate: viewingSessions
+          ? (viewingSessionsWithAdd / viewingSessions) * 100
+          : null,
+      };
+    })
+    .sort((a, b) => a.dishId.localeCompare(b.dishId));
+
   return {
+    activityEventCount: scopedEvents.length,
     menuVisits: menuSessions.size,
     dishViews,
     selectionAdds,
     selectionRate: menuSessions.size ? (selectionSessions.size / menuSessions.size) * 100 : 0,
     whatsappClicks,
-    viewedDishes: [...dishViewCounts.entries()]
-      .map(([dishId, count]) => {
-        const viewSessions = dishViewSessions.get(dishId)?.size ?? 0;
-        const addSessions = dishSelectionSessions.get(dishId)?.size ?? 0;
-        return { dishId, count, addRate: viewSessions ? (addSessions / viewSessions) * 100 : null };
-      })
-      .sort((a, b) => b.count - a.count),
+    dishPerformance,
+    viewedDishes: dishPerformance
+      .filter(({ views }) => views > 0)
+      .map(({ dishId, views, addRate }) => ({ dishId, count: views, addRate }))
+      .sort((a, b) => b.count - a.count || a.dishId.localeCompare(b.dishId)),
     addedDishes: [...dishSelectionCounts.entries()]
+      .filter(([dishId]) => !activeDishIds || activeDishIds.has(dishId))
       .map(([dishId, count]) => ({ dishId, count }))
-      .sort((a, b) => b.count - a.count),
+      .sort((a, b) => b.count - a.count || a.dishId.localeCompare(b.dishId)),
     categories: [...categoryCounts.entries()]
       .map(([categoryId, count]) => ({ categoryId, count }))
-      .sort((a, b) => b.count - a.count),
+      .sort((a, b) => b.count - a.count || a.categoryId.localeCompare(b.categoryId)),
   };
+}
+
+export function getTopDishRankings(
+  dishes: DishPerformance[],
+  metric: "views" | "adds",
+  limit = TOP_DISH_RANKING_LIMIT,
+) {
+  return [...dishes]
+    .filter((dish) => dish[metric] > 0)
+    .sort((a, b) => b[metric] - a[metric] || a.dishId.localeCompare(b.dishId))
+    .slice(0, Math.max(0, limit));
+}
+
+export function analyzeDishOpportunities(
+  dishes: DishPerformance[],
+  maxItems = MAX_DISH_OPPORTUNITIES,
+) {
+  const eligible = dishes.filter(
+    (dish) => dish.viewingSessions >= MIN_DISH_VIEW_SESSIONS_FOR_INSIGHT && dish.addRate !== null,
+  );
+  if (eligible.length < 2 || maxItems <= 0) {
+    return { eligibleDishCount: eligible.length, opportunities: [] as DishOpportunity[] };
+  }
+
+  const rates = eligible.map(({ addRate }) => addRate!).sort((a, b) => a - b);
+  const middle = Math.floor(rates.length / 2);
+  const medianRate = rates.length % 2 ? rates[middle] : (rates[middle - 1] + rates[middle]) / 2;
+  const materialRateGap = Math.max(
+    MIN_OPPORTUNITY_RATE_GAP_PERCENT,
+    medianRate * 0.25,
+  );
+
+  const opportunities = eligible.flatMap((dish): DishOpportunity[] => {
+    const rateDifference = Number((dish.addRate! - medianRate).toFixed(6));
+    if (rateDifference <= -materialRateGap) {
+      return [{
+        dishId: dish.dishId,
+        kind: "many_views_few_adds",
+        views: dish.views,
+        adds: dish.adds,
+        addRate: dish.addRate!,
+        viewingSessions: dish.viewingSessions,
+        viewingSessionsWithAdd: dish.viewingSessionsWithAdd,
+        rateDifference,
+      }];
+    }
+    if (rateDifference >= materialRateGap) {
+      return [{
+        dishId: dish.dishId,
+        kind: "high_add_rate",
+        views: dish.views,
+        adds: dish.adds,
+        addRate: dish.addRate!,
+        viewingSessions: dish.viewingSessions,
+        viewingSessionsWithAdd: dish.viewingSessionsWithAdd,
+        rateDifference,
+      }];
+    }
+    return [];
+  })
+    .sort((a, b) => Math.abs(b.rateDifference) - Math.abs(a.rateDifference) || a.dishId.localeCompare(b.dishId))
+    .slice(0, Math.min(MAX_DISH_OPPORTUNITIES, maxItems));
+
+  return { eligibleDishCount: eligible.length, opportunities };
 }

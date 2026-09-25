@@ -66,6 +66,90 @@ Antes de modificar archivos, clasifica la solicitud:
 - **Base de datos, Auth, RLS, Storage, secretos o migraciones:** siempre requieren plan y validación reforzada.
 - **Acción destructiva o decisión importante de producto:** solicita confirmación explícita antes de ejecutarla.
 
+## Orquestación y delegación
+
+La orquestación multiagente es opcional. Úsala solo cuando separar responsabilidades mejore de forma concreta la calidad, independencia de la revisión o velocidad de una tarea.
+
+### Coordinator
+
+El agente raíz actúa como Coordinator y conserva la responsabilidad completa sobre la tarea. Debe:
+
+- definir objetivo, alcance y criterios de aceptación antes de delegar una tarea no trivial;
+- decidir si delegar aporta valor frente a resolver directamente;
+- entregar a cada subagente únicamente el contexto necesario;
+- coordinar dependencias y evitar trabajo duplicado o contradictorio;
+- integrar los resultados y resolver hallazgos antes del cierre;
+- ser el único responsable de declarar que la tarea está terminada.
+
+El agente que implementa no aprueba su propio trabajo como revisión independiente.
+
+### Roles disponibles
+
+Cuando la tarea lo justifique, divide el trabajo en estos roles:
+
+- **Implementation:** produce el cambio aprobado dentro de un scope acotado.
+- **Reviewer:** revisa de forma independiente el resultado y reporta defectos, regresiones, riesgos y desviaciones de los criterios de aceptación; por defecto no modifica código de producción.
+- **QA / Validation:** valida comportamiento, escenarios y criterios de aceptación de forma independiente; por defecto no modifica código de producción.
+
+Las instrucciones detalladas de cada rol pertenecen a su skill en `.agents/skills/`, no a este archivo.
+
+### Cuándo delegar
+
+Usa subagentes cuando exista una ventaja concreta, por ejemplo:
+
+- tareas independientes que pueden ejecutarse en paralelo;
+- revisión independiente de un cambio no trivial;
+- validación funcional separable de la implementación;
+- investigación de hipótesis independientes;
+- cambios Nivel C o D donde el riesgo justifique revisión adicional.
+
+No delegues por defecto:
+
+- cambios Nivel A;
+- tareas pequeñas o estrechamente acopladas;
+- pasos cuya salida sea necesaria para definir el siguiente;
+- trabajo donde varios agentes necesitarían editar simultáneamente los mismos archivos.
+
+### Contrato de delegación
+
+Toda tarea delegada debe indicar:
+
+- objetivo;
+- criterios de aceptación aplicables;
+- scope incluido y excluido;
+- archivos, módulos o áreas conocidas;
+- permiso de escritura y límites de ese permiso;
+- validaciones esperadas;
+- resultado que debe devolver.
+
+Si un subagente detecta que necesita ampliar materialmente el scope, debe devolver evidencia al Coordinator en lugar de ampliarlo silenciosamente.
+
+### Concurrencia
+
+- Paraleliza solo trabajo verdaderamente independiente.
+- No permitas dos escritores concurrentes sobre los mismos archivos o contratos estrechamente acoplados.
+- Si varios agentes deben escribir en paralelo, separa ownership por módulos no solapados y usa worktrees o entornos aislados cuando estén disponibles.
+- Reviewer y QA deben validar el estado resultante de la implementación que realmente se pretende entregar.
+
+### Flujo por nivel de riesgo
+
+- **Nivel A:** agente raíz; sin subagentes por defecto.
+- **Nivel B:** agente raíz o Implementation; Review/QA solo si existe riesgo concreto.
+- **Nivel C:** Implementation → Review independiente; añade QA cuando exista comportamiento observable, integración o riesgo de regresión funcional.
+- **Nivel D:** Implementation → Review independiente → QA/Validation siempre que el entorno permita una validación útil.
+
+Flujo base para cambios no triviales:
+
+`Coordinator → Implementation → Review → QA/Validation → Coordinator`
+
+Si Review o QA encuentran un defecto que requiere corrección:
+
+`Coordinator → Implementation (fix focalizado) → re-review/retest afectado → Coordinator`
+
+No repitas toda la exploración o validación si solo cambió un área claramente acotada.
+
+Si el runtime no ofrece subagentes reales, no simules independencia: ejecuta las fases posibles secuencialmente e indica la limitación.
+
 ## 2. Exploración progresiva
 
 Antes de planificar o implementar un cambio no trivial:
@@ -122,18 +206,29 @@ Si el usuario dice **“primero plan”**, **“muéstrame el plan”** o **“n
 
 ## 5. Uso de skills y herramientas especializadas
 
-Las skills son herramientas bajo demanda, no pasos obligatorios.
+Las skills son procedimientos reutilizables bajo demanda. **Una skill no crea por sí misma un subagente.** Un subagente puede recibir un rol y usar la skill correspondiente cuando exista.
 
-Usa una skill cuando aporte conocimiento, diagnóstico o un proceso que la tarea realmente necesite.
+La orquestación base prevé estas skills locales:
 
-No invoques skills para:
+- `.agents/skills/implementation/SKILL.md`
+- `.agents/skills/code-review/SKILL.md`
+- `.agents/skills/qa-validation/SKILL.md`
+
+Mientras alguna de ellas no exista, aplica las reglas de este `AGENTS.md` y no finjas haber utilizado una skill inexistente.
+
+Cuando exista una skill:
+
+- úsala únicamente cuando la tarea active ese workflow o rol;
+- no cargues todas las skills por defecto;
+- no combines skills con objetivos superpuestos salvo que exista una razón concreta;
+- no uses una auto-revisión del mismo contexto como sustituto de Review independiente cuando el runtime soporte subagentes.
+
+No invoques skills adicionales para:
 
 - cambios mecánicos;
-- implementación de una especificación ya definida;
 - tareas cuyo patrón sea evidente en el repositorio;
-- repetir un análisis ya documentado.
-
-No combines skills con objetivos superpuestos salvo que exista una razón concreta.
+- repetir un análisis ya documentado;
+- ampliar el scope sin una pregunta concreta.
 
 Cuando una skill produzca una decisión, análisis o especificación reutilizable:
 
@@ -252,6 +347,8 @@ La entrega final debe indicar, cuando aplique:
 - migraciones aplicadas;
 - validaciones ejecutadas y resultados;
 - screenshots o artefactos generados;
+- subagentes o skills utilizados cuando hayan sido relevantes;
+- hallazgos pendientes de Review/QA cuando existan;
 - problemas pendientes o limitaciones reales;
 - siguiente paso recomendado.
 

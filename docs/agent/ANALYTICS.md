@@ -126,13 +126,30 @@ Derivadas de `dish_events`:
 
 `Visitas al menú` cuenta `COUNT(DISTINCT session_id)` para `menu_view`. `Tasa de agregado` es sesiones distintas con `selection_add` / sesiones distintas con `menu_view`; con denominador cero muestra 0%. Los eventos con `session_id` nulo no cuentan como sesión, aunque las vistas/agregados crudos sí se incluyen en sus totales.
 
-La tasa por platillo usa sesiones distintas con evento de agregado frente a sesiones distintas con vista intencional de ese platillo. Si no hay sesiones con vista, no se muestra una tasa.
+Las estadísticas de platillos conservan por separado los conteos crudos, sesiones únicas que vieron, sesiones únicas que agregaron (`addingSessions`) y sesiones únicas que hicieron ambas acciones (`viewingSessionsWithAdd`). La tasa por platillo es la tasa de embudo `viewingSessionsWithAdd / viewingSessions`: requiere que el mismo `session_id` tenga vista y agregado del mismo platillo dentro del período seleccionado, por lo que nunca supera 100%. Si no hay sesiones únicas de vista, la tasa no se muestra. Un agregado sin vista del platillo sigue sumando al conteo crudo y a `addingSessions`/ranking, pero no entra al numerador de la tasa. Los eventos `view` y `cart_add` históricos participan en la misma intersección que `dish_view` y `selection_add`.
 
 `menu_view` solo existe desde el tracking canónico de TASK005; no se reconstruyen visitas históricas. La pantalla muestra esta limitación junto a los datos. La lectura de eventos canónicos depende de que la migración TASK005 esté aplicada en el entorno remoto.
 
-## “Más” y “menos”
+## Rankings Top 5
 
-Los rankings de “Más vistos”, “Más agregados a Mi pedido” y “Categorías más vistas” ordenan los IDs con eventos del período y se unen al catálogo del restaurante actual. No muestran entidades sin eventos ni comparan rendimiento de ventas.
+El dashboard muestra Top 5 para “Platillos más vistos”, “Más agregados a Mi pedido” y “Categorías más vistas”; no presenta Bottom 5. Los rankings de platillos se unen al catálogo actual de platillos activos del tenant. Así no se presentan en rankings accionables platillos ocultos, borrados o huérfanos, aunque sus eventos válidos aún contribuyen a los KPIs de interacción histórica del período. Categorías conserva su catálogo y ranking actuales.
+
+Estos rankings ordenan actividad registrada dentro del período y no comparan ventas.
+
+## Oportunidades por platillo
+
+`Oportunidades` compara únicamente platillos del catálogo activo actual, con por lo menos `MIN_DISH_VIEW_SESSIONS_FOR_INSIGHT = 10` sesiones únicas de vista en el período seleccionado. Se requieren al menos dos platillos elegibles para comparar.
+
+La referencia es la mediana de la tasa por platillo de los elegibles. Una señal se presenta solo cuando la distancia a esa mediana es de al menos el mayor entre 10 puntos porcentuales y 25% de la mediana:
+
+- debajo de la referencia: “Muchas vistas, pocos agregados”;
+- encima de la referencia: “Alta tasa de agregado”.
+
+Las señales se ordenan por magnitud de diferencia y por ID como desempate determinista, con un máximo de tres. Si la muestra es menor o no hay diferencias claras, el dashboard comunica ese estado sin crear una recomendación. Las oportunidades solo usan eventos dentro del tenant y período actuales, incluyen compatibilidad histórica `view`/`cart_add`, describen interacciones y no atribuyen causas.
+
+## Atribución de origen
+
+Los eventos actuales no capturan de manera consistente si la visita llegó desde QR, Instagram, WhatsApp, enlace compartido o acceso directo. El dashboard no muestra atribución; requiere una decisión futura de URL y captura de origen end-to-end.
 
 ## Integridad del tracking
 
