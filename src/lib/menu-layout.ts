@@ -1,4 +1,5 @@
 import type { RestaurantInfo } from "@/data/restaurant";
+import type { MenuTheme } from "@/lib/menu-theme";
 
 export type MenuLayout = "social" | "classic" | "gallery";
 export type CuisineTemplate = RestaurantInfo["cuisineTemplate"];
@@ -45,6 +46,7 @@ export function isCuisineTemplate(value: unknown): value is CuisineTemplate {
 export function buildMenuPreviewPath(
   publicPath: string,
   layout: MenuLayout,
+  menuTheme: MenuTheme,
   theme: CuisineTemplate,
 ): string {
   const hashPosition = publicPath.indexOf("#");
@@ -57,6 +59,7 @@ export function buildMenuPreviewPath(
 
   searchParams.set("preview", "1");
   searchParams.set("menu_layout", layout);
+  searchParams.set("menu_theme", menuTheme);
   searchParams.set("cuisine_template", theme);
 
   return `${pathname}?${searchParams.toString()}${hash}`;

@@ -95,6 +95,7 @@ const restaurant = {
   instagramUsername: "",
   logo: "/logo.jpg",
   menuLayout: "social",
+  menuTheme: "light",
   ownerId: "owner-1",
   cuisineTemplate: "generic",
   showByRating: false,
@@ -150,6 +151,25 @@ describe("RestaurantView analytics boundary", () => {
     expect(presentationMocks.stories).toHaveBeenCalledWith(expect.objectContaining({ activeCategory: "populares" }));
     expect(presentationMocks.classic).not.toHaveBeenCalled();
     expect(presentationMocks.gallery).not.toHaveBeenCalled();
+  });
+
+  it("applies the selected dark theme to the public menu root", () => {
+    const { container } = render(
+      <MemoryRouter>
+        <RestaurantView
+          restaurant={{ ...restaurant, menuTheme: "dark" }}
+          categories={categories}
+          dishes={dishes}
+        />
+      </MemoryRouter>,
+    );
+
+    const themedRoot = container.querySelector("[data-menu-theme='dark']");
+    expect(themedRoot).toBeInTheDocument();
+    expect(themedRoot).toHaveStyle({
+      "--background": "222 30% 10%",
+      "--foreground": "210 25% 96%",
+    });
   });
 
   it("does not track category views in preview", () => {

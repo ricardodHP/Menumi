@@ -163,7 +163,7 @@ describe("DashboardHome responsive layout", () => {
 
     expect(within(screen.getByRole("main")).getByRole("link", { name: "Vista previa" })).toHaveAttribute(
       "href",
-      "/r/dragon-dorado?preview=1&menu_layout=social&cuisine_template=generic",
+      "/r/dragon-dorado?preview=1&menu_layout=social&menu_theme=light&cuisine_template=generic",
     );
     expect(screen.getByText(`${window.location.origin}/r/dragon-dorado`)).toBeInTheDocument();
 
@@ -195,8 +195,28 @@ describe("DashboardHome responsive layout", () => {
     expect(Object.fromEntries(url.searchParams)).toEqual({
       preview: "1",
       menu_layout: "classic",
+      menu_theme: "light",
       cuisine_template: "japanese",
     });
+  });
+
+  it("offers Claro/Oscuro and persists Oscuro with the menu settings", async () => {
+    render(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <DashboardHome />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("combobox", { name: "Apariencia del menú" }));
+    expect(await screen.findByRole("option", { name: "Claro" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("option", { name: "Oscuro" }));
+
+    expect(screen.getByRole("combobox", { name: "Apariencia del menú" })).toHaveTextContent("Oscuro");
+    await waitFor(() => expect(screen.getByRole("button", { name: "Guardar cambios" })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+    await waitFor(() => expect(supabaseMock.updatePayloads).toHaveLength(1));
+    expect(supabaseMock.updatePayloads[0]).toMatchObject({ menu_theme: "dark" });
   });
 
   it("passes the public URL without preview to the QR modal", () => {

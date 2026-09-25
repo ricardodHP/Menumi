@@ -429,6 +429,7 @@ export type Database = {
           instagram_link: string | null
           logo_url: string | null
           menu_layout: string
+          menu_theme: string
           name: string
           owner_id: string | null
           phone: string | null
@@ -452,6 +453,7 @@ export type Database = {
           instagram_link?: string | null
           logo_url?: string | null
           menu_layout?: string
+          menu_theme?: string
           name: string
           owner_id?: string | null
           phone?: string | null
@@ -475,6 +477,7 @@ export type Database = {
           instagram_link?: string | null
           logo_url?: string | null
           menu_layout?: string
+          menu_theme?: string
           name?: string
           owner_id?: string | null
           phone?: string | null

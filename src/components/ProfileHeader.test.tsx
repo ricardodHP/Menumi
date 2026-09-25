@@ -17,6 +17,7 @@ const restaurant = {
   hours: "Mar-Dom 12:00-22:00",
   logo: "/seed/restaurant-logo.png",
   cuisineTemplate: "generic",
+  menuTheme: "light",
   showByRating: false,
   showRating: true,
 } as RestaurantInfo;

@@ -27,10 +27,11 @@ describe("buildMenuPreviewPath", () => {
   it("replaces only the preview configuration and preserves other query parameters", () => {
     expect(
       buildMenuPreviewPath(
-        "/r/demo?preview=0&menu_layout=social&cuisine_template=generic&dish=dish-1",
+        "/r/demo?preview=0&menu_layout=social&menu_theme=light&cuisine_template=generic&dish=dish-1",
         "gallery",
+        "dark",
         "japanese",
       ),
-    ).toBe("/r/demo?preview=1&menu_layout=gallery&cuisine_template=japanese&dish=dish-1");
+    ).toBe("/r/demo?preview=1&menu_layout=gallery&menu_theme=dark&cuisine_template=japanese&dish=dish-1");
   });
 });

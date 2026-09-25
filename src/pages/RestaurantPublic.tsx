@@ -9,6 +9,7 @@ import TableOrdersDrawer from "@/components/TableOrdersDrawer";
 import { trackMenuViewOnce } from "@/lib/analytics";
 import { useAuth } from "@/contexts/AuthContext";
 import { isCuisineTemplate, MENU_LAYOUTS, normalizeMenuLayout } from "@/lib/menu-layout";
+import { normalizeMenuTheme } from "@/lib/menu-theme";
 
 export default function RestaurantPublic() {
   const { slug } = useParams<{ slug: string }>();
@@ -52,12 +53,14 @@ export default function RestaurantPublic() {
     isAdmin || (isOwner && user?.id === restaurant.ownerId)
   );
   const requestedLayout = searchParams.get("menu_layout");
+  const requestedMenuTheme = searchParams.get("menu_theme");
   const requestedTheme = searchParams.get("cuisine_template");
   const hasSupportedLayout = MENU_LAYOUTS.some((layout) => layout.value === requestedLayout);
   const previewRestaurant = canApplyPreviewOverrides
     ? {
         ...restaurant,
         menuLayout: hasSupportedLayout ? normalizeMenuLayout(requestedLayout) : restaurant.menuLayout,
+        menuTheme: normalizeMenuTheme(requestedMenuTheme ?? restaurant.menuTheme),
         cuisineTemplate: isCuisineTemplate(requestedTheme)
           ? requestedTheme
           : restaurant.cuisineTemplate,

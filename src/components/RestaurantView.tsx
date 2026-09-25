@@ -16,6 +16,7 @@ import AssistantModal from "@/components/AssistantModal";
 import ReviewsModal from "@/components/ReviewsModal";
 import type { Category, Dish, RestaurantInfo } from "@/data/restaurant";
 import { getTemplateStyles } from "@/lib/templates";
+import { getMenuThemeStyles, normalizeMenuTheme } from "@/lib/menu-theme";
 import { trackEvent } from "@/lib/analytics";
 
 interface RestaurantViewProps {
@@ -83,8 +84,10 @@ const RestaurantView = ({ restaurant, categories, dishes, isPreview = false }: R
 
 
   const tpl = getTemplateStyles(restaurant.cuisineTemplate);
+  const menuTheme = normalizeMenuTheme(restaurant.menuTheme);
   const rootStyle: CSSProperties = {
     ...(tpl.vars as CSSProperties),
+    ...(getMenuThemeStyles(menuTheme) as CSSProperties),
     fontFamily: tpl.fontFamily,
   };
 
@@ -172,7 +175,8 @@ const RestaurantView = ({ restaurant, categories, dishes, isPreview = false }: R
   }, []);
 
   return (
-    <div className="mx-auto min-h-screen max-w-6xl bg-background" style={rootStyle} data-menu-layout={restaurant.menuLayout}>
+    <div className="min-h-screen bg-background" style={rootStyle} data-menu-theme={menuTheme}>
+      <div className="mx-auto min-h-screen max-w-6xl bg-background" data-menu-layout={restaurant.menuLayout}>
       {/* Top bar */}
       <div className="sticky top-0 z-20 bg-background border-b border-border px-4 py-2.5 flex items-center justify-between">
         <h2 className="text-base font-bold text-foreground">
@@ -329,6 +333,7 @@ const RestaurantView = ({ restaurant, categories, dishes, isPreview = false }: R
           onSubmitted={handleReviewSubmitted}
         />
       )}
+      </div>
     </div>
   );
 };

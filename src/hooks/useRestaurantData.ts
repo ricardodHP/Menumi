@@ -5,6 +5,7 @@ import { filterPublicMenuRecords } from "@/lib/restaurant-public";
 import { loadRestaurantBusinessHours } from "@/lib/business-hours-api";
 import { normalizeInstagramUsername } from "@/lib/instagram";
 import { normalizeMenuLayout } from "@/lib/menu-layout";
+import { normalizeMenuTheme } from "@/lib/menu-theme";
 import { parseDeliveryLinks } from "@/lib/delivery-links";
 
 const FALLBACK_DISH = "/seed/dishes/tacos-pastor.jpg";
@@ -130,6 +131,7 @@ export function useRestaurantData(
         deliveryLinks: parseDeliveryLinks(r.delivery_links),
         instagramUsername: normalizeInstagramUsername(r.instagram_link) ?? "",
         menuLayout: normalizeMenuLayout(r.menu_layout),
+        menuTheme: normalizeMenuTheme(r.menu_theme),
         ownerId: r.owner_id,
         address: r.address ?? undefined,
         hours: r.hours ?? undefined,

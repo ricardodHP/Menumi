@@ -83,6 +83,7 @@ Campos de dominio incluyen:
 - delivery_links (JSON object with optional Uber Eats, Rappi, DiDi Food and custom platform URLs);
 - instagram_link;
 - cuisine_template;
+- menu_theme (`light` o `dark`, `light` por defecto);
 - status;
 - show_by_rating;
 - show_rating;
@@ -111,6 +112,12 @@ La migración `20260925205305_add_restaurant_delivery_links.sql` añade
 `restaurants.delivery_links`, vacío por defecto y limitado a un objeto JSON.
 Se validó y aplicó en la base local; queda pendiente de aplicación remota por
 el responsable del proyecto.
+
+La migración `20260925234223_add_menu_theme.sql` añade
+`restaurants.menu_theme`, con `light` por defecto y una restricción para
+`light`/`dark`. El archivo está preparado para aplicación remota; la validación
+con `supabase db push --dry-run` queda pendiente porque el entorno local no
+dispone de Docker.
 
 Estados:
 

@@ -104,7 +104,7 @@ Incluye:
 - Asistente del Chef;
 - QR del menú.
 
-Social es el diseño predeterminado para menús existentes y nuevos. La presentación se guarda aparte de `cuisine_template`, que continúa como tema visual independiente. Los cinco temas actuales son provisionales; definir sus estilos y catálogo definitivos queda pendiente.
+Social es el diseño predeterminado para menús existentes y nuevos. La presentación se guarda aparte de `cuisine_template`, que continúa como tema visual independiente. La apariencia global también se guarda por separado en `menu_theme`, con `light` como valor predeterminado y `dark` como opción para todo el menú. Los cinco temas actuales son provisionales; definir sus estilos y catálogo definitivos queda pendiente.
 
 ### Estadísticas
 

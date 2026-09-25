@@ -41,6 +41,7 @@ const restaurant: RestaurantInfo = {
   instagramUsername: "",
   logo: "/logo.jpg",
   menuLayout: "social",
+  menuTheme: "light",
   ownerId: null,
   cuisineTemplate: "generic",
   showByRating: false,

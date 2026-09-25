@@ -33,6 +33,7 @@ vi.mock("@/components/RestaurantView", () => ({
     <div>
       Menú de {restaurant.name}
       <span data-testid="menu-layout">{restaurant.menuLayout}</span>
+      <span data-testid="menu-theme">{restaurant.menuTheme}</span>
       <span data-testid="cuisine-template">{restaurant.cuisineTemplate}</span>
     </div>
   ),
@@ -49,6 +50,7 @@ const restaurant = {
   instagramUsername: "",
   logo: "/seed/restaurant-logo.png",
   menuLayout: "social",
+  menuTheme: "light",
   ownerId: "owner-1",
   cuisineTemplate: "generic",
   showByRating: false,
@@ -113,7 +115,7 @@ describe("RestaurantPublic preview boundary", () => {
     authMock.isOwner = true;
 
     render(
-      <MemoryRouter initialEntries={["/r/dragon-dorado?preview=1&menu_layout=classic&cuisine_template=chinese"]}>
+      <MemoryRouter initialEntries={["/r/dragon-dorado?preview=1&menu_layout=classic&menu_theme=dark&cuisine_template=chinese"]}>
         <Routes>
           <Route path="/r/:slug" element={<RestaurantPublic />} />
         </Routes>
@@ -121,6 +123,7 @@ describe("RestaurantPublic preview boundary", () => {
     );
 
     expect(screen.getByTestId("menu-layout")).toHaveTextContent("classic");
+    expect(screen.getByTestId("menu-theme")).toHaveTextContent("dark");
     expect(screen.getByTestId("cuisine-template")).toHaveTextContent("chinese");
   });
 
@@ -160,6 +163,7 @@ describe("RestaurantPublic preview boundary", () => {
     const savedSettings = {
       ...restaurant,
       menuLayout: "gallery",
+      menuTheme: "light",
       cuisineTemplate: "chinese",
     } satisfies RestaurantInfo;
     useRestaurantDataMock.mockReturnValue({ ...emptyMenu, restaurant: savedSettings });

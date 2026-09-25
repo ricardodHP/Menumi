@@ -38,6 +38,7 @@ import {
   normalizeMenuLayout,
   type MenuLayout,
 } from "@/lib/menu-layout";
+import { MENU_THEMES, normalizeMenuTheme, type MenuTheme } from "@/lib/menu-theme";
 
 type CuisineTemplate = Database["public"]["Enums"]["cuisine_template"];
 
@@ -117,6 +118,7 @@ export default function DashboardHome() {
     instagram_link: "",
     delivery_links: {} as DeliveryLinks,
     menu_layout: "social" as MenuLayout,
+    menu_theme: "light" as MenuTheme,
     cuisine_template: "generic" as CuisineTemplate,
     show_by_rating: false,
     show_rating: true,
@@ -149,6 +151,7 @@ export default function DashboardHome() {
       instagram_link: restaurant.instagram_link ?? "",
       delivery_links: parseDeliveryLinks(restaurant.delivery_links),
       menu_layout: normalizeMenuLayout(restaurant.menu_layout),
+      menu_theme: normalizeMenuTheme(restaurant.menu_theme),
       cuisine_template: restaurant.cuisine_template,
       show_by_rating: restaurant.show_by_rating,
       show_rating: restaurant.show_rating,
@@ -251,6 +254,7 @@ export default function DashboardHome() {
           ],
         ),
         menu_layout: form.menu_layout,
+        menu_theme: form.menu_theme,
         cuisine_template: form.cuisine_template,
         show_by_rating: form.show_by_rating,
         show_rating: form.show_rating,
@@ -325,7 +329,7 @@ export default function DashboardHome() {
   }
 
   const publicPath = getRestaurantPublicPath(restaurant.slug);
-  const previewHref = buildMenuPreviewPath(publicPath, form.menu_layout, form.cuisine_template);
+  const previewHref = buildMenuPreviewPath(publicPath, form.menu_layout, form.menu_theme, form.cuisine_template);
   const publicUrl = getRestaurantPublicUrl(restaurant.slug, window.location.origin);
 
   return (
@@ -609,6 +613,27 @@ export default function DashboardHome() {
               </Select>
               <p className="text-xs text-muted-foreground mt-1">
                 Define colores y tipografía del menú público.
+              </p>
+            </div>
+            <div>
+              <Label>Apariencia del menú</Label>
+              <Select
+                value={form.menu_theme}
+                onValueChange={(value) => setForm({ ...form, menu_theme: normalizeMenuTheme(value) })}
+              >
+                <SelectTrigger aria-label="Apariencia del menú">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {MENU_THEMES.map((theme) => (
+                    <SelectItem key={theme.value} value={theme.value}>
+                      {theme.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Define si el menú se muestra con fondo claro u oscuro.
               </p>
             </div>
             <div>
