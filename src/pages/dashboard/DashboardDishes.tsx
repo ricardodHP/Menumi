@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Plus, Pencil, Trash2, Star, Heart, Upload } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useManagedRestaurant } from "@/hooks/useManagedRestaurant";
 import { toast } from "sonner";
@@ -84,15 +85,21 @@ const emptyForm: DishForm = {
 
 export default function DashboardDishes() {
   const { restaurant, loading: loadingR } = useManagedRestaurant();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [dishes, setDishes] = useState<DishRow[]>([]);
   const [categories, setCategories] = useState<CategoryRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<string>("all");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<DishRow | null>(null);
   const [form, setForm] = useState<DishForm>(emptyForm);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+
+  const requestedFilter = searchParams.get("category");
+  const filter =
+    requestedFilter === "uncategorized" || categories.some((category) => category.id === requestedFilter)
+      ? requestedFilter
+      : "all";
 
   const load = async () => {
     if (!restaurant) return;
@@ -246,6 +253,13 @@ export default function DashboardDishes() {
         ? dishes.filter((d) => !d.category_id)
         : dishes.filter((d) => d.category_id === filter);
 
+  const handleFilterChange = (value: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (value === "all") next.delete("category");
+    else next.set("category", value);
+    setSearchParams(next);
+  };
+
   if (loadingR) {
     return (
       <DashboardLayout>
@@ -276,7 +290,7 @@ export default function DashboardDishes() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Select value={filter} onValueChange={setFilter}>
+          <Select value={filter} onValueChange={handleFilterChange}>
             <SelectTrigger className="w-[180px]">
               <SelectValue />
             </SelectTrigger>

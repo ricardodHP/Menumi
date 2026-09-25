@@ -46,6 +46,15 @@ describe("public menu analytics", () => {
     expect(getAnonymousSessionId()).toBe(sessionId);
   });
 
+  it("migrates the previous session key without creating a new analytics session", () => {
+    const legacySessionId = "12345678-1234-4234-8234-123456789abc";
+    sessionStorage.setItem("culinary_feed_analytics_session:v1", legacySessionId);
+
+    expect(getAnonymousSessionId()).toBe(legacySessionId);
+    expect(sessionStorage.getItem("menumi_analytics_session:v1")).toBe(legacySessionId);
+    expect(sessionStorage.getItem("culinary_feed_analytics_session:v1")).toBeNull();
+  });
+
   it("records at most one menu_view per restaurant and tab while allowing other restaurants", async () => {
     trackMenuViewOnce({ restaurantId: "restaurant-a", isPreview: false });
     trackMenuViewOnce({ restaurantId: "restaurant-a", isPreview: false });
@@ -58,6 +67,17 @@ describe("public menu analytics", () => {
       expect.objectContaining({ restaurant_id: "restaurant-b", event_type: "menu_view" }),
     ]);
     expect(insertMock.mock.calls[0][0].session_id).toBe(insertMock.mock.calls[1][0].session_id);
+  });
+
+  it("migrates a previous menu-view marker without recording a duplicate view", async () => {
+    sessionStorage.setItem("culinary_feed_menu_view:v1:restaurant-a", "1");
+
+    trackMenuViewOnce({ restaurantId: "restaurant-a", isPreview: false });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(sessionStorage.getItem("menumi_menu_view:v1:restaurant-a")).toBe("1");
+    expect(sessionStorage.getItem("culinary_feed_menu_view:v1:restaurant-a")).toBeNull();
+    expect(insertMock).not.toHaveBeenCalled();
   });
 
   it("suppresses every event centrally in preview mode", async () => {

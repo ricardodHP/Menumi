@@ -1,4 +1,4 @@
-# Arquitectura — Culinary Feed
+# Arquitectura — Menumi
 
 ## Objetivo
 

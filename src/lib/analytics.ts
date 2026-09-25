@@ -2,8 +2,10 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type EventType = "menu_view" | "dish_view" | "selection_add" | "category_view" | "whatsapp_clicked";
 
-const ANALYTICS_SESSION_KEY = "culinary_feed_analytics_session:v1";
-const MENU_VIEW_KEY_PREFIX = "culinary_feed_menu_view:v1:";
+const ANALYTICS_SESSION_KEY = "menumi_analytics_session:v1";
+const MENU_VIEW_KEY_PREFIX = "menumi_menu_view:v1:";
+const LEGACY_ANALYTICS_SESSION_KEY = "culinary_feed_analytics_session:v1";
+const LEGACY_MENU_VIEW_KEY_PREFIX = "culinary_feed_menu_view:v1:";
 let fallbackSessionId: string | null = null;
 const fallbackMenuViews = new Set<string>();
 
@@ -28,6 +30,16 @@ export function getAnonymousSessionId(): string {
   try {
     const existing = sessionStorage.getItem(ANALYTICS_SESSION_KEY);
     if (existing && /^[0-9a-f-]{36}$/i.test(existing)) return existing;
+    const legacy = sessionStorage.getItem(LEGACY_ANALYTICS_SESSION_KEY);
+    if (legacy && /^[0-9a-f-]{36}$/i.test(legacy)) {
+      try {
+        sessionStorage.setItem(ANALYTICS_SESSION_KEY, legacy);
+        sessionStorage.removeItem(LEGACY_ANALYTICS_SESSION_KEY);
+      } catch {
+        // Keep using the existing ID when storage cannot complete the key migration.
+      }
+      return legacy;
+    }
     const fresh = createSessionId();
     sessionStorage.setItem(ANALYTICS_SESSION_KEY, fresh);
     return fresh;
@@ -68,8 +80,18 @@ export function trackMenuViewOnce(params: { restaurantId: string; isPreview: boo
   if (params.isPreview) return;
 
   const storageKey = `${MENU_VIEW_KEY_PREFIX}${params.restaurantId}`;
+  const legacyStorageKey = `${LEGACY_MENU_VIEW_KEY_PREFIX}${params.restaurantId}`;
   try {
     if (sessionStorage.getItem(storageKey)) return;
+    if (sessionStorage.getItem(legacyStorageKey)) {
+      try {
+        sessionStorage.setItem(storageKey, "1");
+        sessionStorage.removeItem(legacyStorageKey);
+      } catch {
+        // Preserve the legacy marker and suppress a duplicate menu view.
+      }
+      return;
+    }
     // Mark before dispatch so React remounts and failed inserts do not inflate traffic.
     sessionStorage.setItem(storageKey, "1");
   } catch {

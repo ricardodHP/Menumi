@@ -1,4 +1,4 @@
-# Reglas de producto — Culinary Feed
+# Reglas de producto — Menumi
 
 ## Propósito
 

@@ -4,6 +4,7 @@ import { useRestaurantData } from "./useRestaurantData";
 
 const supabaseMock = vi.hoisted(() => {
   const eqCalls: Array<{ table: string; column: string; value: unknown }> = [];
+  const orderCalls: Array<{ table: string; column: string; ascending: boolean | undefined }> = [];
   const restaurant = {
     id: "restaurant-1",
     name: "Dragón Dorado",
@@ -63,7 +64,7 @@ const supabaseMock = vi.hoisted(() => {
       select: () => Query;
       eq: (column: string, value: unknown) => Query;
       in: () => Query;
-      order: () => Promise<{ data: typeof categoryRows | typeof dishRows; error: null }>;
+      order: (column: string, options?: { ascending?: boolean }) => Promise<{ data: typeof categoryRows | typeof dishRows; error: null }>;
       maybeSingle: () => Promise<{ data: typeof restaurant | null; error: null }>;
       not: () => Promise<{ data: Array<{ dish_id: string | null }>; error: null }>;
     };
@@ -77,15 +78,17 @@ const supabaseMock = vi.hoisted(() => {
       return query;
     }) as Query["eq"];
     query.in = vi.fn(() => query) as Query["in"];
-    query.order = vi.fn(() => Promise.resolve({
-      data: table === "categories"
-        ? categoryRows
-        : table === "dishes"
-          ? dishRows
-          : [],
-      error: null,
-    }),
-    ) as Query["order"];
+    query.order = vi.fn((column: string, options?: { ascending?: boolean }) => {
+      orderCalls.push({ table, column, ascending: options?.ascending });
+      return Promise.resolve({
+        data: table === "categories"
+          ? categoryRows
+          : table === "dishes"
+            ? dishRows
+            : [],
+        error: null,
+      });
+    }) as Query["order"];
     query.maybeSingle = vi.fn(() =>
       Promise.resolve({
         data: restaurantResult
@@ -98,7 +101,12 @@ const supabaseMock = vi.hoisted(() => {
     return query;
   });
 
-  return { from, eqCalls, setRestaurantResult: (value: typeof restaurant | null) => { restaurantResult = value; } };
+  return {
+    from,
+    eqCalls,
+    orderCalls,
+    setRestaurantResult: (value: typeof restaurant | null) => { restaurantResult = value; },
+  };
 });
 
 vi.mock("@/integrations/supabase/client", () => ({
@@ -108,6 +116,7 @@ vi.mock("@/integrations/supabase/client", () => ({
 describe("useRestaurantData publication boundary", () => {
   beforeEach(() => {
     supabaseMock.eqCalls.length = 0;
+    supabaseMock.orderCalls.length = 0;
     supabaseMock.setRestaurantResult({
       id: "restaurant-1",
       name: "Dragón Dorado",
@@ -138,8 +147,21 @@ describe("useRestaurantData publication boundary", () => {
       value: "published",
     });
     expect(result.current.categories.map((category) => category.id)).toEqual(["visible-category"]);
+    expect(result.current.categories[0].image).toBe("/seed/dishes/tacos-pastor.jpg");
     expect(result.current.dishes.map((dish) => dish.id)).toEqual(["visible-dish"]);
     expect(result.current.restaurant?.whatsappEnabled).toBe(true);
+  });
+
+  it("requests public categories in their persisted position order", async () => {
+    const { result } = renderHook(() => useRestaurantData("dragon-dorado"));
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(supabaseMock.orderCalls).toContainEqual({
+      table: "categories",
+      column: "position",
+      ascending: true,
+    });
   });
 
   it("loads a draft preview when the database authorization boundary returns it", async () => {

@@ -1,8 +1,8 @@
-# Contexto del proyecto — Culinary Feed
+# Contexto del proyecto — Menumi
 
 ## Propósito
 
-Culinary Feed es una plataforma multi-tenant de menús digitales para restaurantes.
+Menumi es una plataforma multi-tenant de menús digitales para restaurantes.
 
 El producto combina:
 

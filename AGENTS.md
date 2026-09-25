@@ -1,4 +1,4 @@
-# Instrucciones de trabajo para Culinary Feed
+# Instrucciones de trabajo para Menumi
 
 Estas instrucciones aplican a todo el repositorio. El objetivo es trabajar con precisión, preservar la calidad del producto y usar únicamente el contexto, exploración, skills y validaciones necesarias para cada tarea.
 
@@ -279,7 +279,7 @@ No enumeres apartados irrelevantes para cambios pequeños.
 
 ## Contexto funcional mínimo
 
-Culinary Feed es una plataforma multi-tenant de menús digitales para restaurantes con experiencia pública mobile-first, administración de categorías y platillos, interacciones sociales y analítica básica.
+Menumi es una plataforma multi-tenant de menús digitales para restaurantes con experiencia pública mobile-first, administración de categorías y platillos, interacciones sociales y analítica básica.
 
 El MVP actual se concentra en el menú público y su administración. Mesas, meseros, sesiones y pedidos por mesa existen en el repositorio, pero están fuera del MVP activo y se consideran funcionalidades congeladas salvo instrucción explícita.
 

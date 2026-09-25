@@ -1,4 +1,4 @@
-# Estado y estrategia de validación — Culinary Feed
+# Estado y estrategia de validación — Menumi
 
 ## Propósito
 

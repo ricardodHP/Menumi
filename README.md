@@ -1,3 +1,3 @@
-# Culinary Feed
+# Menumi
 
 Digital menus for discovering restaurant dishes.

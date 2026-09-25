@@ -1,4 +1,4 @@
-# Supabase — Culinary Feed
+# Supabase — Menumi
 
 ## Propósito
 
@@ -124,6 +124,13 @@ Incluyen:
 - image_url;
 - position.
 - is_visible.
+
+La migración `20260925055639_restrict_category_deletion_with_dishes.sql` de
+TASK007.2 reemplaza la FK `dishes.category_id` con `ON DELETE RESTRICT`. Así,
+una categoría con platillos no se puede eliminar ni siquiera fuera del
+dashboard. Figura aplicada en local y remoto según `supabase migration list --linked`;
+`supabase/tests/task007_2_categories_test.sql` pasó sus dos pruebas
+pgTAP el 2026-09-25.
 
 Owner/admin escriben según políticas existentes.
 

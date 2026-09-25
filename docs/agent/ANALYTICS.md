@@ -1,4 +1,4 @@
-# Analytics y estadísticas — Culinary Feed
+# Analytics y estadísticas — Menumi
 
 ## Propósito
 
