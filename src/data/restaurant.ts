@@ -13,6 +13,7 @@ export interface Dish {
   likes: number;
   tags: string[];
   showRating: boolean;
+  isAvailable?: boolean;
   reviewsCount?: number;
 }
 

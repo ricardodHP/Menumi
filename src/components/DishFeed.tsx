@@ -172,6 +172,7 @@ const DishFeed = ({
                 </button>
                 <button
                   onClick={() => {
+                    if (dish.isAvailable === false) return;
                     addItem(dish);
                     if (!isPreview) {
                       trackEvent({
@@ -183,9 +184,13 @@ const DishFeed = ({
                       });
                     }
                   }}
+                  disabled={dish.isAvailable === false}
+                  aria-label={dish.isAvailable === false ? "Agotado" : undefined}
                   className="flex items-center gap-1.5 bg-primary text-primary-foreground text-xs font-semibold px-3 py-1.5 rounded-full hover:opacity-90 transition-opacity active:scale-95"
                 >
-                  {items.some((i) => i.dish.id === dish.id) ? (
+                  {dish.isAvailable === false ? (
+                    "Agotado"
+                  ) : items.some((i) => i.dish.id === dish.id) ? (
                     <>
                       <Check className="w-3.5 h-3.5" /> Agregar más
                     </>

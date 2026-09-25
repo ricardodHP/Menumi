@@ -129,4 +129,23 @@ describe("DishFeed analytics boundary", () => {
       isPreview: false,
     });
   });
+
+  it("keeps an unavailable dish visible but blocks adding it to Mi pedido", () => {
+    const unavailableDish = { ...dish, isAvailable: false };
+    render(<DishFeed dishes={[unavailableDish]} startIndex={0} restaurant={restaurant} onClose={vi.fn()} />);
+
+    const addButton = screen.getByRole("button", { name: "Agotado" });
+    expect(addButton).toBeDisabled();
+    fireEvent.click(addButton);
+    expect(addItemMock).not.toHaveBeenCalled();
+    expect(trackEventMock).not.toHaveBeenCalledWith(expect.objectContaining({ eventType: "selection_add" }));
+  });
+
+  it("hides rating display without disabling dish reviews", () => {
+    render(<DishFeed dishes={[{ ...dish, showRating: false }]} startIndex={0} restaurant={restaurant} onClose={vi.fn()} />);
+
+    expect(screen.queryByRole("button", { name: "Ver y dejar reseñas" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Ver comentarios" }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
 });

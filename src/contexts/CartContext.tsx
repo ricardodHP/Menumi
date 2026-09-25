@@ -164,7 +164,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   // ---------- Local mode mutations ----------
   const addItemLocal = useCallback((dish: Dish) => {
     const currentDish = restaurantScopeRef.current?.dishes.find((item) => item.id === dish.id);
-    if (!currentDish) return;
+    if (!currentDish || currentDish.isAvailable === false) return;
 
     setItems((prev) => {
       const existing = prev.find((i) => i.dish.id === dish.id);
@@ -178,6 +178,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const updateQuantityLocal = useCallback((dishId: string, quantity: number) => {
+    if (quantity > 0 && restaurantScopeRef.current?.dishes.find((dish) => dish.id === dishId)?.isAvailable === false) return;
     const normalizedQuantity = Number.isFinite(quantity) ? Math.floor(quantity) : 0;
     if (normalizedQuantity <= 0) {
       setItems((prev) => prev.filter((i) => i.dish.id !== dishId));
@@ -208,7 +209,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     const next: CartItem[] = [];
     for (const row of data) {
       const dish = dishResolverRef.current(row.dish_id);
-      if (dish) {
+      if (dish && dish.isAvailable !== false) {
         next.push({ dish, quantity: row.quantity, addedByName: row.added_by_name ?? undefined });
       }
     }
@@ -235,7 +236,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   // ---------- Shared mode mutations ----------
   const addItemShared = useCallback(async (dish: Dish) => {
-    if (!shared) return;
+    if (!shared || dishResolverRef.current(dish.id)?.isAvailable === false) return;
     const device = getDeviceId();
     const name = getStoredName() ?? undefined;
     const { data: existing } = await supabase
@@ -264,6 +265,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   const updateQuantityShared = useCallback(async (dishId: string, quantity: number) => {
     if (!shared) return;
+    if (quantity > 0 && dishResolverRef.current(dishId)?.isAvailable === false) return;
     if (quantity <= 0) {
       await supabase
         .from("shared_cart_items")

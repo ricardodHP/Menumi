@@ -74,7 +74,7 @@ export function hydrateSelection<D extends { id: string }>(
 
   for (const item of selection.items) {
     const dish = dishesById.get(item.dishId);
-    if (dish && item.quantity > 0) {
+    if (dish && (dish as D & { isAvailable?: boolean }).isAvailable !== false && item.quantity > 0) {
       items.push({ dish, quantity: item.quantity });
     }
   }

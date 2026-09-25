@@ -64,4 +64,14 @@ describe("cart selection persistence", () => {
 
     expect(hydrated.items[0].dish.price).toBe(245);
   });
+
+  it("removes unavailable dishes from a persisted selection", () => {
+    const hydrated = hydrateSelection(
+      { items: [{ dishId: pasta.id, quantity: 3 }], note: "Sin cebolla" },
+      [{ ...pasta, isAvailable: false }],
+    );
+
+    expect(hydrated.items).toEqual([]);
+    expect(hydrated.note).toBe("Sin cebolla");
+  });
 });

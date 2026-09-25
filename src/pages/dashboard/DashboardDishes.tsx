@@ -31,12 +31,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, Star, Heart, Upload } from "lucide-react";
+import { Plus, Pencil, Trash2, Star, Heart, Upload, Search, Copy } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useManagedRestaurant } from "@/hooks/useManagedRestaurant";
 import { toast } from "sonner";
+import { filterAdminDishes, getDishImageExtension, isSupportedDishImage, normalizeDishTags, validateDishPrice } from "@/lib/dish-admin";
 
 interface CategoryRow {
   id: string;
@@ -54,6 +55,7 @@ interface DishRow {
   tags: string[];
   is_featured: boolean;
   is_active: boolean;
+  is_available: boolean;
   show_rating: boolean;
   category_id: string | null;
   position: number;
@@ -65,22 +67,24 @@ interface DishForm {
   price: string;
   image_url: string | null;
   category_id: string | null;
-  tags: string;
+  tags: string[];
   is_featured: boolean;
   is_active: boolean;
   show_rating: boolean;
+  is_available: boolean;
 }
 
 const emptyForm: DishForm = {
   name: "",
   description: "",
-  price: "0",
+  price: "",
   image_url: null,
   category_id: null,
-  tags: "",
+  tags: [],
   is_featured: false,
   is_active: true,
   show_rating: true,
+  is_available: true,
 };
 
 export default function DashboardDishes() {
@@ -94,6 +98,8 @@ export default function DashboardDishes() {
   const [form, setForm] = useState<DishForm>(emptyForm);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [search, setSearch] = useState("");
+  const [tagInput, setTagInput] = useState("");
 
   const requestedFilter = searchParams.get("category");
   const filter =
@@ -107,7 +113,7 @@ export default function DashboardDishes() {
     const [dRes, cRes] = await Promise.all([
       supabase
         .from("dishes")
-        .select("id, name, description, price, image_url, rating, likes_count, tags, is_featured, is_active, show_rating, category_id, position")
+        .select("id, name, description, price, image_url, rating, likes_count, tags, is_featured, is_active, is_available, show_rating, category_id, position")
         .eq("restaurant_id", restaurant.id)
         .order("position", { ascending: true }),
       supabase
@@ -131,6 +137,7 @@ export default function DashboardDishes() {
   const openNew = () => {
     setEditing(null);
     setForm(emptyForm);
+    setTagInput("");
     setOpen(true);
   };
 
@@ -142,11 +149,13 @@ export default function DashboardDishes() {
       price: String(d.price),
       image_url: d.image_url,
       category_id: d.category_id,
-      tags: d.tags.join(", "),
+      tags: d.tags,
       is_featured: d.is_featured,
       is_active: d.is_active,
       show_rating: d.show_rating,
+      is_available: d.is_available,
     });
+    setTagInput("");
     setOpen(true);
   };
 
@@ -156,9 +165,9 @@ export default function DashboardDishes() {
       toast.error("El nombre es obligatorio");
       return;
     }
-    const priceNum = Number(form.price);
-    if (Number.isNaN(priceNum) || priceNum < 0) {
-      toast.error("Precio inválido");
+    const priceNum = validateDishPrice(form.price, editing?.price);
+    if (priceNum === null) {
+      toast.error("Ingresa un precio mayor que cero");
       return;
     }
     setSaving(true);
@@ -168,18 +177,17 @@ export default function DashboardDishes() {
       price: priceNum,
       image_url: form.image_url,
       category_id: form.category_id,
-      tags: form.tags
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean),
+      tags: normalizeDishTags([...form.tags, tagInput].join(",")),
       is_featured: form.is_featured,
       is_active: form.is_active,
+      is_available: form.is_available,
       show_rating: form.show_rating,
     };
+    let succeeded = false;
     if (editing) {
       const { error } = await supabase.from("dishes").update(payload).eq("id", editing.id);
       if (error) toast.error(error.message);
-      else toast.success("Platillo actualizado");
+      else { toast.success("Platillo actualizado"); succeeded = true; }
     } else {
       const nextPos = dishes.length ? Math.max(...dishes.map((d) => d.position)) + 1 : 0;
       const { error } = await supabase.from("dishes").insert({
@@ -188,11 +196,13 @@ export default function DashboardDishes() {
         position: nextPos,
       });
       if (error) toast.error(error.message);
-      else toast.success("Platillo creado");
+      else { toast.success("Platillo creado"); succeeded = true; }
     }
     setSaving(false);
-    setOpen(false);
-    load();
+    if (succeeded) {
+      setOpen(false);
+      load();
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -225,12 +235,48 @@ export default function DashboardDishes() {
     }
   };
 
+  const toggleAvailable = async (d: DishRow) => {
+    const { error } = await supabase.from("dishes").update({ is_available: !d.is_available }).eq("id", d.id);
+    if (error) toast.error(error.message);
+    else {
+      toast.success(d.is_available ? "Platillo marcado como agotado" : "Platillo disponible");
+      load();
+    }
+  };
+
+  const duplicateDish = async (d: DishRow) => {
+    if (!restaurant) return;
+    const nextPos = dishes.length ? Math.max(...dishes.map((item) => item.position)) + 1 : 0;
+    const { error } = await supabase.from("dishes").insert({
+      restaurant_id: restaurant.id,
+      position: nextPos,
+      name: `${d.name} (copia)`,
+      description: d.description,
+      price: d.price,
+      image_url: d.image_url,
+      category_id: d.category_id,
+      tags: d.tags,
+      is_featured: false,
+      is_active: true,
+      is_available: true,
+      show_rating: d.show_rating,
+    });
+    if (error) toast.error(error.message);
+    else { toast.success("Platillo duplicado"); load(); }
+  };
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!restaurant) return;
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!isSupportedDishImage(file)) {
+      toast.error("Usa una imagen JPEG, PNG o WebP");
+      e.target.value = "";
+      return;
+    }
     setUploading(true);
-    const ext = file.name.split(".").pop();
+    const ext = getDishImageExtension(file.type);
+    if (!ext) return;
     const path = `${restaurant.id}/${Date.now()}.${ext}`;
     const { error: upErr } = await supabase.storage
       .from("dish-images")
@@ -246,12 +292,11 @@ export default function DashboardDishes() {
     toast.success("Imagen subida");
   };
 
-  const filtered =
-    filter === "all"
-      ? dishes
-      : filter === "uncategorized"
-        ? dishes.filter((d) => !d.category_id)
-        : dishes.filter((d) => d.category_id === filter);
+  const filtered = filterAdminDishes(
+    dishes.map((d) => ({ ...d, category: d.category_id ?? "", description: d.description ?? "" })),
+    search,
+    filter,
+  );
 
   const handleFilterChange = (value: string) => {
     const next = new URLSearchParams(searchParams);
@@ -289,7 +334,11 @@ export default function DashboardDishes() {
             Gestiona los platillos de tu menú y revisa likes y calificaciones
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+          <div className="relative w-full sm:w-56">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+            <Input aria-label="Buscar platillos" placeholder="Buscar platillos" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+          </div>
           <Select value={filter} onValueChange={handleFilterChange}>
             <SelectTrigger className="w-[180px]">
               <SelectValue />
@@ -317,72 +366,28 @@ export default function DashboardDishes() {
       ) : filtered.length === 0 ? (
         <Card>
           <CardContent className="py-10 text-center text-muted-foreground">
-            No hay platillos. Crea el primero con "Nuevo platillo".
+            {search || filter !== "all" ? "No hay platillos que coincidan con la búsqueda o categoría." : <>No hay platillos. Crea el primero con "Nuevo platillo".</>}
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="space-y-2">
           {filtered.map((d) => (
             <Card key={d.id} className={`overflow-hidden ${!d.is_active ? "opacity-60" : ""}`}>
-              <div className="aspect-video bg-muted relative">
-                {d.image_url ? (
-                  <img src={d.image_url} alt={d.name} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
-                    Sin imagen
-                  </div>
-                )}
-                <Button
-                  size="icon"
-                  variant="secondary"
-                  className="absolute top-2 right-2 h-8 w-8"
-                  onClick={() => toggleFeatured(d)}
-                  title={d.is_featured ? "Quitar destacado" : "Marcar destacado"}
-                >
-                  <Star className={d.is_featured ? "h-4 w-4 fill-primary text-primary" : "h-4 w-4"} />
-                </Button>
-              </div>
-              <CardContent className="p-3 space-y-2">
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-semibold leading-tight">{d.name}</h3>
-                  <span className="text-sm font-bold whitespace-nowrap">${d.price.toFixed(2)}</span>
+              <div className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center">
+                <div className="h-20 w-20 shrink-0 overflow-hidden rounded-md bg-muted">
+                  {d.image_url ? <img src={d.image_url} alt={d.name} className="aspect-square h-full w-full object-cover" /> : <div className="flex aspect-square h-full items-center justify-center text-xs text-muted-foreground">Sin imagen</div>}
                 </div>
-                {d.description && (
-                  <p className="text-xs text-muted-foreground line-clamp-2">{d.description}</p>
-                )}
-                <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
-                  <span className="inline-flex items-center gap-1">
-                    <Star className="h-3 w-3" /> {d.rating.toFixed(1)}
-                  </span>
-                  <span className="inline-flex items-center gap-1">
-                    <Heart className="h-3 w-3" /> {d.likes_count}
-                  </span>
-                  {d.is_featured && <Badge variant="secondary">Destacado</Badge>}
-                  {!d.is_active && <Badge variant="outline">Deshabilitado</Badge>}
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex flex-wrap items-center gap-2"><h3 className="font-semibold leading-tight">{d.name}</h3><span className="text-sm font-bold">${d.price.toFixed(2)}</span>{d.is_featured && <Badge variant="secondary">Destacado</Badge>}{!d.is_active && <Badge variant="outline">Oculto</Badge>}{!d.is_available && <Badge variant="destructive">Agotado</Badge>}</div>
+                  {d.description && <p className="text-xs text-muted-foreground line-clamp-1">{d.description}</p>}
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">{d.show_rating && <span className="inline-flex items-center gap-1"><Star className="h-3 w-3" />{d.rating.toFixed(1)}</span>}<span className="inline-flex items-center gap-1"><Heart className="h-3 w-3" />{d.likes_count}</span>{d.tags.slice(0, 4).map((tag) => <Badge key={tag} variant="outline" className="text-[10px]">{tag}</Badge>)}</div>
                 </div>
-                <div className="flex items-center justify-between rounded-md border px-2 py-1.5">
-                  <Label htmlFor={`active-${d.id}`} className="text-xs cursor-pointer">
-                    Visible en el menú
-                  </Label>
-                  <Switch
-                    id={`active-${d.id}`}
-                    checked={d.is_active}
-                    onCheckedChange={() => toggleActive(d)}
-                  />
-                </div>
-                {d.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1">
-                    {d.tags.slice(0, 3).map((t) => (
-                      <Badge key={t} variant="outline" className="text-[10px]">
-                        {t}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-                <div className="flex gap-2 pt-1">
-                  <Button variant="outline" size="sm" className="flex-1" onClick={() => openEdit(d)}>
-                    <Pencil className="h-3 w-3" /> Editar
-                  </Button>
+                <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                  <Button size="sm" variant="outline" onClick={() => toggleFeatured(d)} aria-label={d.is_featured ? "Quitar destacado" : "Marcar destacado"}><Star className={d.is_featured ? "h-4 w-4 fill-primary text-primary" : "h-4 w-4"} /></Button>
+                  <div className="flex items-center gap-1 rounded-md border px-2 py-1"><Label htmlFor={`active-${d.id}`} className="cursor-pointer text-xs">Visible</Label><Switch id={`active-${d.id}`} checked={d.is_active} onCheckedChange={() => toggleActive(d)} /></div>
+                  <div className="flex items-center gap-1 rounded-md border px-2 py-1"><Label htmlFor={`available-${d.id}`} className="cursor-pointer text-xs">Disponible</Label><Switch id={`available-${d.id}`} checked={d.is_available} onCheckedChange={() => toggleAvailable(d)} /></div>
+                  <Button size="sm" variant="outline" onClick={() => duplicateDish(d)} aria-label={`Duplicar ${d.name}`}><Copy className="h-4 w-4" /></Button>
+                  <Button variant="outline" size="sm" onClick={() => openEdit(d)}><Pencil className="h-3 w-3" /><span className="hidden sm:inline">Editar</span></Button>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button variant="outline" size="sm" className="text-destructive">
@@ -405,7 +410,7 @@ export default function DashboardDishes() {
                     </AlertDialogContent>
                   </AlertDialog>
                 </div>
-              </CardContent>
+              </div>
             </Card>
           ))}
         </div>
@@ -417,7 +422,7 @@ export default function DashboardDishes() {
             <DialogTitle>{editing ? "Editar platillo" : "Nuevo platillo"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <div className="aspect-video bg-muted rounded-md overflow-hidden">
+            <div className="aspect-square max-h-64 bg-muted rounded-md overflow-hidden">
               {form.image_url ? (
                 <img src={form.image_url} alt="" className="w-full h-full object-cover" />
               ) : (
@@ -434,7 +439,7 @@ export default function DashboardDishes() {
               <input
                 id="img"
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp"
                 className="hidden"
                 onChange={handleImageUpload}
                 disabled={uploading}
@@ -461,6 +466,8 @@ export default function DashboardDishes() {
                   id="dprice"
                   type="number"
                   step="0.01"
+                  min="0.01"
+                  placeholder="Ej. 120.00"
                   value={form.price}
                   onChange={(e) => setForm({ ...form, price: e.target.value })}
                 />
@@ -486,13 +493,28 @@ export default function DashboardDishes() {
               </div>
             </div>
             <div>
-              <Label htmlFor="dtags">Tags (separados por coma)</Label>
+              <Label htmlFor="dtags">Etiquetas</Label>
               <Input
                 id="dtags"
-                value={form.tags}
-                onChange={(e) => setForm({ ...form, tags: e.target.value })}
-                placeholder="picante, vegano, nuevo"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === ",") {
+                    e.preventDefault();
+                    const next = normalizeDishTags(tagInput);
+                    setForm((current) => ({ ...current, tags: normalizeDishTags([...current.tags, ...next].join(",")) }));
+                    setTagInput("");
+                  }
+                }}
+                placeholder="Escribe una etiqueta y presiona Enter"
               />
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {form.tags.map((tag) => <Badge key={tag} variant="outline" className="gap-1">{tag}<button type="button" aria-label={`Quitar etiqueta ${tag}`} onClick={() => setForm((current) => ({ ...current, tags: current.tags.filter((value) => value !== tag) }))}>×</button></Badge>)}
+              </div>
+            </div>
+            <div className="flex items-center justify-between rounded-md border p-3">
+              <div><Label className="text-sm">Disponible para pedir</Label><p className="text-xs text-muted-foreground">Si se agota, seguirá visible pero no se podrá agregar a Mi pedido.</p></div>
+              <Switch checked={form.is_available} onCheckedChange={(v) => setForm({ ...form, is_available: v })} />
             </div>
             <div className="flex items-center gap-2">
               <input
@@ -522,7 +544,7 @@ export default function DashboardDishes() {
               <div>
                 <Label className="text-sm">Mostrar calificación</Label>
                 <p className="text-xs text-muted-foreground">
-                  Si está apagado, se ocultan las estrellas y los clientes no podrán dejar reseñas de este platillo.
+                  Si está apagado, se oculta la calificación. Los clientes aún pueden dejar reseñas.
                 </p>
               </div>
               <Switch

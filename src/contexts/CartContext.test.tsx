@@ -162,6 +162,21 @@ describe("CartProvider local selection", () => {
     expect(result.current.items).toEqual([]);
   });
 
+  it("prevents adding an unavailable dish and removes it when hydrating a saved order", () => {
+    const unavailableDish = { ...dishA, isAvailable: false };
+    const first = renderCartHook();
+    act(() => first.result.current.setRestaurantScope("restaurant-a", [dishA]));
+    act(() => first.result.current.addItem(dishA));
+    first.unmount();
+
+    const second = renderCartHook();
+    act(() => second.result.current.setRestaurantScope("restaurant-a", [unavailableDish]));
+    act(() => second.result.current.addItem(unavailableDish));
+
+    expect(second.result.current.items).toEqual([]);
+    expect(second.result.current.totalPrice).toBe(0);
+  });
+
   it("keeps preview selection ephemeral and does not overwrite persisted selection", () => {
     const customer = renderCartHook();
     act(() => customer.result.current.setRestaurantScope("restaurant-a", [dishA]));

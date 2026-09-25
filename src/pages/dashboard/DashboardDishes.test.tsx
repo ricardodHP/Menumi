@@ -82,6 +82,7 @@ describe("DashboardDishes contextual actions", () => {
       tags: [],
       is_featured: false,
       is_active: true,
+      is_available: true,
       show_rating: true,
       category_id: categoryId,
       position: 0,
@@ -99,5 +100,20 @@ describe("DashboardDishes contextual actions", () => {
 
     expect(await screen.findByRole("heading", { name: "Pasta Alfredo" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Caldo" })).not.toBeInTheDocument();
+  });
+
+  it("searches dish names and descriptions while keeping the category filter", async () => {
+    mocks.categories = [{ id: "category-pasta", name: "Pastas" }];
+    mocks.dishes = [
+      { id: "pasta", name: "Pasta", description: "Con parmesano", price: 10, image_url: null, rating: 0, likes_count: 0, tags: [], is_featured: false, is_active: true, is_available: true, show_rating: true, category_id: "category-pasta", position: 0 },
+      { id: "soup", name: "Caldo", description: "Casero", price: 10, image_url: null, rating: 0, likes_count: 0, tags: [], is_featured: false, is_active: true, is_available: true, show_rating: true, category_id: "category-soup", position: 1 },
+    ];
+    render(<MemoryRouter initialEntries={["/dashboard/platillos?category=category-pasta"]}><DashboardDishes /></MemoryRouter>);
+    const search = await screen.findByRole("textbox", { name: "Buscar platillos" });
+    fireEvent.change(search, { target: { value: "parmesano" } });
+    expect(screen.getByRole("heading", { name: "Pasta" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Caldo" })).not.toBeInTheDocument();
+    fireEvent.change(search, { target: { value: "caldo" } });
+    expect(screen.getByText("No hay platillos que coincidan con la búsqueda o categoría.")).toBeInTheDocument();
   });
 });

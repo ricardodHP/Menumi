@@ -63,6 +63,11 @@ const DishGrid = ({ dishes, onDishClick, resetKey }: DishGridProps) => {
               height={512}
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
             />
+            {dish.isAvailable === false && (
+              <div className="absolute inset-0 flex items-end justify-center bg-foreground/45 p-2">
+                <span className="rounded-full bg-background/95 px-2.5 py-1 text-xs font-semibold text-foreground">Agotado</span>
+              </div>
+            )}
             <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/30 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
               <div className="flex items-center gap-3 text-primary-foreground text-sm font-semibold">
                 <span>❤️ {dish.likes}</span>

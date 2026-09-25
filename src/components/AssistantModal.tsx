@@ -46,7 +46,8 @@ function getRecommendations(answers: Record<string, string>, allDishes: Dish[]):
 
   const lc = (s: string) => (s ?? "").toLowerCase();
 
-  let candidates = [...allDishes];
+  const availableDishes = allDishes.filter((dish) => dish.isAvailable !== false);
+  let candidates = [...availableDishes];
 
   // Filter by mood using tags + keywords
   if (mood === "carne") {
@@ -75,11 +76,11 @@ function getRecommendations(answers: Record<string, string>, allDishes: Dish[]):
 
   candidates.sort((a, b) => b.rating - a.rating);
 
-  const main = candidates.length > 0 ? [candidates[0]] : [allDishes[0]].filter(Boolean);
+  const main = candidates.length > 0 ? [candidates[0]] : [availableDishes[0]].filter(Boolean);
 
   // Companion picks based on extra
   const pickCompanion = (regex: RegExp) =>
-    allDishes
+    availableDishes
       .filter((d) =>
         [...d.tags.map(lc), lc(d.name), lc(d.description)].some((s) => regex.test(s)),
       )
@@ -117,6 +118,7 @@ const AssistantModal = ({ open, onClose, dishes }: Props) => {
   };
 
   const handleAdd = (dish: Dish) => {
+    if (dish.isAvailable === false) return;
     addItem(dish);
     setAddedIds((prev) => new Set(prev).add(dish.id));
     toast.success(`${dish.name} agregado al carrito`);
@@ -193,7 +195,11 @@ const AssistantModal = ({ open, onClose, dishes }: Props) => {
                 🎯 ¡Te recomiendo esto!
               </p>
 
-              {recommendations.map((dish) => (
+              {recommendations.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No hay platillos disponibles para esta recomendación.
+                </p>
+              ) : recommendations.map((dish) => (
                 <div key={dish.id} className="flex gap-3 p-3 rounded-xl bg-card border border-border">
                   <img
                     src={dish.image}
