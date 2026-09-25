@@ -5,6 +5,7 @@ import { filterPublicMenuRecords } from "@/lib/restaurant-public";
 import { loadRestaurantBusinessHours } from "@/lib/business-hours-api";
 import { normalizeInstagramUsername } from "@/lib/instagram";
 import { normalizeMenuLayout } from "@/lib/menu-layout";
+import { parseDeliveryLinks } from "@/lib/delivery-links";
 
 const FALLBACK_DISH = "/seed/dishes/tacos-pastor.jpg";
 const FALLBACK_LOGO = "/seed/restaurant-logo.png";
@@ -125,6 +126,8 @@ export function useRestaurantData(
         posts: dishes.length,
         whatsappLink: r.whatsapp_link ?? "",
         whatsappEnabled: r.whatsapp_enabled,
+        phone: r.phone ?? undefined,
+        deliveryLinks: parseDeliveryLinks(r.delivery_links),
         instagramUsername: normalizeInstagramUsername(r.instagram_link) ?? "",
         menuLayout: normalizeMenuLayout(r.menu_layout),
         ownerId: r.owner_id,

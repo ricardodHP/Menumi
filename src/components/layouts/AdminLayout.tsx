@@ -23,10 +23,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <header className="border-b bg-card sticky top-0 z-40">
-        <div className="container mx-auto px-4 h-14 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
+        <div className="mx-auto flex h-14 w-full max-w-7xl items-center justify-between gap-4 px-4">
+          <div className="flex shrink-0 items-center gap-2">
             <Shield className="h-5 w-5 text-primary" />
-            <h1 className="font-semibold">Panel Admin</h1>
+            <h1 className="whitespace-nowrap font-semibold">Panel Admin</h1>
           </div>
           <div className="flex items-center gap-3">
             <span className="text-sm text-muted-foreground hidden sm:inline">{user?.email}</span>
@@ -36,7 +36,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             </Button>
           </div>
         </div>
-        <nav className="container mx-auto px-4 flex gap-1 overflow-x-auto">
+        <nav className="mx-auto flex w-full max-w-7xl gap-1 overflow-x-auto px-4">
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = location.pathname === item.to;
@@ -56,7 +56,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           })}
         </nav>
       </header>
-      <main className="flex-1 container mx-auto px-4 py-6">{children}</main>
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6">{children}</main>
     </div>
   );
 }

@@ -80,6 +80,7 @@ Campos de dominio incluyen:
 - hours;
 - whatsapp_link;
 - whatsapp_enabled;
+- delivery_links (JSON object with optional Uber Eats, Rappi, DiDi Food and custom platform URLs);
 - instagram_link;
 - cuisine_template;
 - status;
@@ -105,6 +106,11 @@ La migración fue aplicada manualmente. Los tipos en
 `src/integrations/supabase/types.ts` están sincronizados con el esquema y
 describen las tablas, la columna y el RPC públicos; el cliente usa esos tipos
 generados directamente.
+
+La migración `20260925205305_add_restaurant_delivery_links.sql` añade
+`restaurants.delivery_links`, vacío por defecto y limitado a un objeto JSON.
+Se validó y aplicó en la base local; queda pendiente de aplicación remota por
+el responsable del proyecto.
 
 Estados:
 
@@ -236,6 +242,14 @@ Buckets/policies observados para:
 
 - `restaurant-logos`;
 - `dish-images`.
+
+Las políticas de Storage para ambos buckets deben calificar la ruta como
+`storage.objects.name` dentro de sus subconsultas a `restaurants`. Sin esa
+calificación, Postgres resuelve `name` como `restaurants.name`, lo que puede
+rechazar el upload y su respuesta. La migración
+`20260925194900_qualify_storage_object_paths_in_select_policies.sql` corrige
+las ocho políticas de INSERT, UPDATE, DELETE y SELECT y está aplicada en la
+base local y remota, según `supabase migration list --linked` del 2026-09-25.
 
 Las políticas han evolucionado mediante migraciones.
 

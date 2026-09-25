@@ -2,6 +2,7 @@
 // via useRestaurantData, but the UI components keep working with this shape.
 import type { WeeklyBusinessDay } from "@/lib/business-hours";
 import type { MenuLayout } from "@/lib/menu-layout";
+import type { DeliveryLinks } from "@/lib/delivery-links";
 
 export interface Dish {
   id: string;
@@ -35,6 +36,8 @@ export interface RestaurantInfo {
   posts: number;
   whatsappLink: string;
   whatsappEnabled: boolean;
+  phone?: string;
+  deliveryLinks?: DeliveryLinks;
   /** Normalized username. Public URLs are built only at the Instagram boundary. */
   instagramUsername: string;
   menuLayout: MenuLayout;

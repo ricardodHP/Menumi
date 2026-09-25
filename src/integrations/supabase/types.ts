@@ -423,6 +423,7 @@ export type Database = {
           bio: string | null
           created_at: string
           cuisine_template: Database["public"]["Enums"]["cuisine_template"]
+          delivery_links: Json
           hours: string | null
           id: string
           instagram_link: string | null
@@ -445,6 +446,7 @@ export type Database = {
           bio?: string | null
           created_at?: string
           cuisine_template?: Database["public"]["Enums"]["cuisine_template"]
+          delivery_links?: Json
           hours?: string | null
           id?: string
           instagram_link?: string | null
@@ -467,6 +469,7 @@ export type Database = {
           bio?: string | null
           created_at?: string
           cuisine_template?: Database["public"]["Enums"]["cuisine_template"]
+          delivery_links?: Json
           hours?: string | null
           id?: string
           instagram_link?: string | null

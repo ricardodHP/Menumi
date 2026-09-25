@@ -54,6 +54,9 @@ Puede incluir información como:
 Los links externos deben usar datos configurados por el restaurante.
 
 No inventar URLs o contactos.
+La dirección abre una búsqueda de ubicación en mapas y el teléfono usa una
+acción de llamada. Los enlaces opcionales de Uber Eats, Rappi, DiDi Food y una
+plataforma personalizada se muestran agrupados solo cuando están configurados.
 
 ## Categorías
 

@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Heart, QrCode } from "lucide-react";
+import { ExternalLink, Heart, MapPin, Phone, QrCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import QrCodeModal from "@/components/QrCodeModal";
 import BusinessHoursDetailsDialog from "@/components/BusinessHoursDetailsDialog";
 import type { RestaurantInfo } from "@/data/restaurant";
 import { formatBusinessHoursSummary } from "@/lib/business-hours";
 import { buildInstagramUrl, getInstagramDisplayUsername } from "@/lib/instagram";
+import { DELIVERY_PLATFORMS } from "@/lib/delivery-links";
 
 interface ProfileHeaderProps {
   restaurant: RestaurantInfo;
@@ -20,6 +21,19 @@ const ProfileHeader = ({ restaurant, variant = "social" }: ProfileHeaderProps) =
   const instagramUrl = buildInstagramUrl(restaurant.instagramUsername);
   const businessHoursSummary = restaurant.businessHours
     ? formatBusinessHoursSummary(restaurant.businessHours)
+    : null;
+  const deliveryLinks = DELIVERY_PLATFORMS.flatMap(({ key, label }) => {
+    const url = restaurant.deliveryLinks?.[key];
+    return url ? [{ key, label, url }] : [];
+  }).concat(restaurant.deliveryLinks?.other
+    ? [{ key: "other", label: restaurant.deliveryLinks.other.label, url: restaurant.deliveryLinks.other.url }]
+    : []);
+  const mapUrl = restaurant.address
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(restaurant.address)}`
+    : null;
+  const phoneDigits = restaurant.phone?.replace(/\D/g, "");
+  const phoneUrl = phoneDigits
+    ? `${restaurant.phone?.trim().startsWith("+") ? "+" : ""}${phoneDigits}`
     : null;
   return (
     <div
@@ -68,12 +82,25 @@ const ProfileHeader = ({ restaurant, variant = "social" }: ProfileHeaderProps) =
               {restaurant.bio}
             </p>
           )}
-          {(restaurant.address || restaurant.hours || restaurant.businessHours || restaurant.businessHoursLoadError) && (
+          {(restaurant.address || phoneUrl || restaurant.hours || restaurant.businessHours || restaurant.businessHoursLoadError) && (
             <div className={isCompact
               ? "mt-1 space-y-0.5 text-[11px] text-muted-foreground sm:text-xs"
               : "text-xs text-muted-foreground mt-2 space-y-0.5 sm:text-sm"}
             >
-              {restaurant.address && <p>📍 {restaurant.address}</p>}
+              {restaurant.address && mapUrl && (
+                <a href={mapUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-start gap-1 hover:text-foreground">
+                  <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                  <span>{restaurant.address}</span>
+                  <ExternalLink className="mt-0.5 h-3 w-3 shrink-0" aria-hidden="true" />
+                  <span className="sr-only">Abrir ubicación en mapas</span>
+                </a>
+              )}
+              {restaurant.phone?.trim() && phoneUrl && (
+                <a href={`tel:${phoneUrl}`} className="inline-flex items-center gap-1 hover:text-foreground">
+                  <Phone className="h-3.5 w-3.5" aria-hidden="true" />
+                  <span>{restaurant.phone.trim()}</span>
+                </a>
+              )}
               {restaurant.businessHoursLoadError ? (
                 <p role="status">🕒 No se pudieron cargar los horarios.</p>
               ) : restaurant.businessHours ? (
@@ -94,10 +121,31 @@ const ProfileHeader = ({ restaurant, variant = "social" }: ProfileHeaderProps) =
           )}
         </div>
 
+        {deliveryLinks.length > 0 && (
+          <div className={isCompact
+            ? "col-span-2 mt-3 flex flex-wrap items-center gap-2 sm:col-span-3"
+            : "mt-3 flex flex-wrap items-center gap-2"}
+          >
+            <span className="text-xs font-medium text-muted-foreground">Pide a domicilio:</span>
+            {deliveryLinks.map(({ key, label, url }) => (
+              <a
+                key={key}
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex min-h-8 items-center gap-1 rounded-full border border-border bg-background px-3 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+              >
+                {label}
+                <ExternalLink className="h-3 w-3" aria-hidden="true" />
+              </a>
+            ))}
+          </div>
+        )}
+
         {/* Action buttons */}
         <div className={isCompact
-          ? "col-span-2 flex gap-2 sm:col-span-1 sm:justify-self-end"
-          : "flex gap-2 mb-2 sm:mb-0"}
+          ? "col-span-2 flex gap-2 sm:col-span-1 sm:col-start-3 sm:justify-self-end"
+          : "flex gap-2 mb-2 mt-2 sm:col-start-2 sm:justify-start sm:mb-0 sm:mt-0"}
         >
           {instagramUrl && (
             <Button asChild variant="default" size="sm" className={isCompact

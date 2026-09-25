@@ -31,6 +31,7 @@ import {
   type WeeklyBusinessDay,
 } from "@/lib/business-hours";
 import { normalizeInstagramUsername } from "@/lib/instagram";
+import { DELIVERY_PLATFORMS, isHttpUrl, parseDeliveryLinks, type DeliveryLinks } from "@/lib/delivery-links";
 import {
   buildMenuPreviewPath,
   MENU_LAYOUTS,
@@ -114,6 +115,7 @@ export default function DashboardHome() {
     whatsapp_link: "",
     whatsapp_enabled: false,
     instagram_link: "",
+    delivery_links: {} as DeliveryLinks,
     menu_layout: "social" as MenuLayout,
     cuisine_template: "generic" as CuisineTemplate,
     show_by_rating: false,
@@ -145,6 +147,7 @@ export default function DashboardHome() {
       whatsapp_link: getWhatsAppPhoneInputValue(restaurant.whatsapp_link),
       whatsapp_enabled: restaurant.whatsapp_enabled,
       instagram_link: restaurant.instagram_link ?? "",
+      delivery_links: parseDeliveryLinks(restaurant.delivery_links),
       menu_layout: normalizeMenuLayout(restaurant.menu_layout),
       cuisine_template: restaurant.cuisine_template,
       show_by_rating: restaurant.show_by_rating,
@@ -202,6 +205,20 @@ export default function DashboardHome() {
       toast.error("Escribe un usuario válido o una URL válida de Instagram.");
       return;
     }
+    for (const { key, label } of DELIVERY_PLATFORMS) {
+      const url = form.delivery_links[key]?.trim();
+      if (url && !isHttpUrl(url)) {
+        toast.error(`Escribe una URL válida para ${label} (debe comenzar con http:// o https://).`);
+        return;
+      }
+    }
+    const customDelivery = form.delivery_links.other;
+    if (customDelivery && (customDelivery.label.trim() || customDelivery.url.trim())) {
+      if (!customDelivery.label.trim() || !isHttpUrl(customDelivery.url.trim())) {
+        toast.error("Completa el nombre y una URL válida para la otra plataforma de entrega.");
+        return;
+      }
+    }
     if (hoursDirty) {
       const validationError = validateWeeklyBusinessHours(businessHours);
       if (validationError) {
@@ -225,6 +242,14 @@ export default function DashboardHome() {
         whatsapp_link: form.whatsapp_link.trim() || null,
         whatsapp_enabled: form.whatsapp_enabled,
         instagram_link: instagramUsername,
+        delivery_links: Object.fromEntries(
+          [
+            ...DELIVERY_PLATFORMS.map(({ key }) => [key, form.delivery_links[key]?.trim() || null]),
+            ["other", form.delivery_links.other?.label.trim() && form.delivery_links.other.url.trim()
+              ? { label: form.delivery_links.other.label.trim(), url: form.delivery_links.other.url.trim() }
+              : null],
+          ],
+        ),
         menu_layout: form.menu_layout,
         cuisine_template: form.cuisine_template,
         show_by_rating: form.show_by_rating,
@@ -463,7 +488,7 @@ export default function DashboardHome() {
               </div>
             </div>
             <div>
-              <Label htmlFor="ig">Instagram</Label>
+              <Label htmlFor="ig">Instagram (Solo introduce tu nombre de usuario)</Label>
               <Input
                 id="ig"
                 value={form.instagram_link}
@@ -472,6 +497,66 @@ export default function DashboardHome() {
               />
             </div>
           </div>
+
+          <section className="space-y-3 border-t pt-5">
+            <div>
+              <h3 className="font-semibold">Plataformas de entrega</h3>
+              <p className="text-sm text-muted-foreground">Agrega solo las plataformas donde tus clientes pueden pedir.</p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {DELIVERY_PLATFORMS.map(({ key, label }) => (
+                <div key={key}>
+                  <Label htmlFor={`delivery-${key}`}>{label}</Label>
+                  <Input
+                    id={`delivery-${key}`}
+                    type="url"
+                    inputMode="url"
+                    placeholder="https://…"
+                    value={form.delivery_links[key] ?? ""}
+                    onChange={(event) => setForm((current) => ({
+                      ...current,
+                      delivery_links: { ...current.delivery_links, [key]: event.target.value },
+                    }))}
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <Label htmlFor="delivery-other-name">Otra plataforma (opcional)</Label>
+                <Input
+                  id="delivery-other-name"
+                  maxLength={40}
+                  placeholder="Nombre de la plataforma"
+                  value={form.delivery_links.other?.label ?? ""}
+                  onChange={(event) => setForm((current) => ({
+                    ...current,
+                    delivery_links: {
+                      ...current.delivery_links,
+                      other: { label: event.target.value, url: current.delivery_links.other?.url ?? "" },
+                    },
+                  }))}
+                />
+              </div>
+              <div>
+                <Label htmlFor="delivery-other-url">Enlace de la plataforma</Label>
+                <Input
+                  id="delivery-other-url"
+                  type="url"
+                  inputMode="url"
+                  placeholder="https://…"
+                  value={form.delivery_links.other?.url ?? ""}
+                  onChange={(event) => setForm((current) => ({
+                    ...current,
+                    delivery_links: {
+                      ...current.delivery_links,
+                      other: { label: current.delivery_links.other?.label ?? "", url: event.target.value },
+                    },
+                  }))}
+                />
+              </div>
+            </div>
+          </section>
 
           <h3 className="border-t pt-5 font-semibold">Preferencias del menú</h3>
           <fieldset className="space-y-2">

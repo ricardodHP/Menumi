@@ -1,9 +1,8 @@
 import { useState, useMemo, useCallback, useEffect, useLayoutEffect, type CSSProperties } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { useCart, getStoredName } from "@/contexts/CartContext";
 import { toast } from "sonner";
-import { Grid3X3, Star, Search, X, User, MessageSquare } from "lucide-react";
-import { useAuth, getDefaultRouteForRoles } from "@/contexts/AuthContext";
+import { Grid3X3, Star, Search, X, MessageSquare } from "lucide-react";
 import ProfileHeader from "@/components/ProfileHeader";
 import CategoryStories from "@/components/CategoryStories";
 import DishGrid from "@/components/DishGrid";
@@ -39,8 +38,6 @@ const RestaurantView = ({ restaurant, categories, dishes, isPreview = false }: R
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [restaurantReviewsOpen, setRestaurantReviewsOpen] = useState(false);
   const [refreshTick, setRefreshTick] = useState(0);
-  const { user, roles } = useAuth();
-  const accountHref = user ? getDefaultRouteForRoles(roles) : "/login";
   const [searchParams, setSearchParams] = useSearchParams();
   const { setRestaurantScope, joinSharedCart, shared } = useCart();
 
@@ -192,9 +189,6 @@ const RestaurantView = ({ restaurant, categories, dishes, isPreview = false }: R
           >
             <Search className="w-5 h-5" />
           </button>
-          <Link to={accountHref} className="text-foreground" aria-label={user ? "Mi cuenta" : "Iniciar sesión"}>
-            <User className="w-5 h-5" />
-          </Link>
           {!isPreview && (
             <button
               onClick={() => setRestaurantReviewsOpen(true)}
