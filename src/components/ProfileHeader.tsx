@@ -2,7 +2,10 @@ import { useState } from "react";
 import { Heart, QrCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import QrCodeModal from "@/components/QrCodeModal";
+import BusinessHoursDetailsDialog from "@/components/BusinessHoursDetailsDialog";
 import type { RestaurantInfo } from "@/data/restaurant";
+import { formatBusinessHoursSummary } from "@/lib/business-hours";
+import { buildInstagramUrl, getInstagramDisplayUsername } from "@/lib/instagram";
 
 interface ProfileHeaderProps {
   restaurant: RestaurantInfo;
@@ -10,7 +13,12 @@ interface ProfileHeaderProps {
 
 const ProfileHeader = ({ restaurant }: ProfileHeaderProps) => {
   const [qrOpen, setQrOpen] = useState(false);
+  const [hoursOpen, setHoursOpen] = useState(false);
   const menuUrl = `${window.location.origin}/r/${restaurant.username}`;
+  const instagramUrl = buildInstagramUrl(restaurant.instagramUsername);
+  const businessHoursSummary = restaurant.businessHours
+    ? formatBusinessHoursSummary(restaurant.businessHours)
+    : null;
   return (
     <div className="px-4 pt-4 pb-2 md:mx-auto md:max-w-4xl md:px-10 md:py-8">
       <div className="md:grid md:grid-cols-[180px_minmax(0,1fr)] md:items-center md:gap-x-10 md:gap-y-4">
@@ -37,25 +45,37 @@ const ProfileHeader = ({ restaurant }: ProfileHeaderProps) => {
               {restaurant.bio}
             </p>
           )}
-          {(restaurant.address || restaurant.hours) && (
+          {(restaurant.address || restaurant.hours || restaurant.businessHours || restaurant.businessHoursLoadError) && (
             <div className="text-xs text-muted-foreground mt-2 space-y-0.5 md:text-sm">
               {restaurant.address && <p>📍 {restaurant.address}</p>}
-              {restaurant.hours && <p>🕒 {restaurant.hours}</p>}
+              {restaurant.businessHoursLoadError ? (
+                <p role="status">🕒 No se pudieron cargar los horarios.</p>
+              ) : restaurant.businessHours ? (
+                <div className="flex flex-wrap items-center gap-x-2">
+                  <p>🕒 {businessHoursSummary?.text}</p>
+                  <button
+                    type="button"
+                    className="font-medium text-primary underline-offset-4 hover:underline"
+                    onClick={() => setHoursOpen(true)}
+                  >
+                    Ver horarios
+                  </button>
+                </div>
+              ) : restaurant.hours ? (
+                <p>🕒 {restaurant.hours}</p>
+              ) : null}
             </div>
           )}
         </div>
 
         {/* Action buttons */}
         <div className="flex gap-2 mb-2 md:mb-0">
-          {restaurant.instagramLink && (
-            <Button
-              variant="default"
-              size="sm"
-              className="flex-1 h-8 text-xs font-semibold md:flex-none md:px-6"
-              onClick={() => window.open(restaurant.instagramLink, "_blank")}
-            >
-              <Heart className="w-3.5 h-3.5 mr-1" />
-              Seguir
+          {instagramUrl && (
+            <Button asChild variant="default" size="sm" className="flex-1 h-8 text-xs font-semibold md:flex-none md:px-6">
+              <a href={instagramUrl} target="_blank" rel="noopener noreferrer">
+                <Heart className="w-3.5 h-3.5 mr-1" />
+                Seguir {getInstagramDisplayUsername(restaurant.instagramUsername)}
+              </a>
             </Button>
           )}
           <Button
@@ -79,6 +99,9 @@ const ProfileHeader = ({ restaurant }: ProfileHeaderProps) => {
         logoUrl={restaurant.logo}
         customizable={false}
       />
+      {restaurant.businessHours && (
+        <BusinessHoursDetailsDialog days={restaurant.businessHours} open={hoursOpen} onOpenChange={setHoursOpen} />
+      )}
     </div>
   );
 };

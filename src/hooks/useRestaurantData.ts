@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Category, Dish, RestaurantInfo } from "@/data/restaurant";
 import { filterPublicMenuRecords } from "@/lib/restaurant-public";
+import { loadRestaurantBusinessHours } from "@/lib/business-hours-api";
+import { normalizeInstagramUsername } from "@/lib/instagram";
 
 const FALLBACK_DISH = "/seed/dishes/tacos-pastor.jpg";
 const FALLBACK_LOGO = "/seed/restaurant-logo.png";
@@ -55,7 +57,7 @@ export function useRestaurantData(
         return;
       }
 
-      const [cRes, dRes] = await Promise.all([
+      const [cRes, dRes, hoursResult] = await Promise.all([
         supabase
           .from("categories")
           .select("id, name, emoji, image_url, position, is_visible")
@@ -67,6 +69,12 @@ export function useRestaurantData(
           .eq("restaurant_id", r.id)
           .eq("is_active", true)
           .order("position", { ascending: true }),
+        loadRestaurantBusinessHours(r.id)
+          .then((schedule) => ({ schedule, error: false }))
+          .catch((error: unknown) => {
+            console.error("Could not load restaurant business hours", error);
+            return { schedule: null, error: true };
+          }),
       ]);
       if (cancelled) return;
 
@@ -80,7 +88,7 @@ export function useRestaurantData(
         .eq("restaurant_id", r.id)
         .not("dish_id", "is", null);
       (revRows ?? []).forEach((row) => {
-        const id = (row as { dish_id: string | null }).dish_id;
+        const id = row.dish_id;
         if (id) reviewCounts[id] = (reviewCounts[id] ?? 0) + 1;
       });
 
@@ -101,7 +109,7 @@ export function useRestaurantData(
         rating: Number(d.rating),
         likes: d.likes_count,
         tags: d.tags ?? [],
-        showRating: (d as { show_rating?: boolean }).show_rating ?? true,
+        showRating: d.show_rating,
         reviewsCount: reviewCounts[d.id] ?? 0,
       }));
 
@@ -113,13 +121,16 @@ export function useRestaurantData(
         posts: dishes.length,
         whatsappLink: r.whatsapp_link ?? "",
         whatsappEnabled: r.whatsapp_enabled,
-        instagramLink: r.instagram_link ?? "",
+        instagramUsername: normalizeInstagramUsername(r.instagram_link) ?? "",
         address: r.address ?? undefined,
         hours: r.hours ?? undefined,
+        businessHours: hoursResult.schedule,
+        businessHoursLoadError: hoursResult.error,
         logo: r.logo_url ?? FALLBACK_LOGO,
         cuisineTemplate: r.cuisine_template,
         showByRating: r.show_by_rating,
-        showRating: (r as { show_rating?: boolean }).show_rating ?? true,
+        showRating: r.show_rating,
+        allowReviews: r.allow_reviews,
       };
 
       setState({ loading: false, notFound: false, restaurant, categories, dishes });

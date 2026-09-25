@@ -27,6 +27,7 @@ import {
   BarChart3,
   Menu,
   CheckCircle2,
+  Store as StoreIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useManagedRestaurant } from "@/hooks/useManagedRestaurant";
@@ -76,9 +77,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-background flex flex-col">
       <header className="border-b bg-card sticky top-0 z-40">
         <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
             <Store className="h-5 w-5 text-primary shrink-0" />
-            <h1 className="font-semibold truncate">Mi restaurante</h1>
+            <h1 className="min-w-0 font-semibold" title={restaurant?.name ?? "Restaurante"}>
+              <span className="sm:hidden">Restaurante</span>
+              <span className="hidden max-w-[min(32vw,20rem)] truncate sm:inline-block">
+                {restaurant?.name ?? "Mi restaurante"}
+              </span>
+            </h1>
           </div>
           <div className="flex items-center gap-2">
             {restaurant && (
@@ -86,15 +92,15 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 onClick={() => setConfirmOpen(true)}
                 disabled={toggling}
                 className={cn(
-                  "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                  "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-2 py-1 text-xs font-medium transition-colors sm:px-3",
                   isPublished
                     ? "border-primary text-primary bg-primary/5 hover:bg-primary/10"
                     : "border-muted-foreground/30 text-muted-foreground hover:bg-muted",
                 )}
                 aria-label={isPublished ? "Despublicar" : "Publicar"}
               >
-                {isPublished && <CheckCircle2 className="h-3.5 w-3.5" />}
-                {isPublished ? "Publicado" : "Borrador"}
+                {isPublished ? <CheckCircle2 className="h-3.5 w-3.5" /> : <StoreIcon className="h-3.5 w-3.5" />}
+                <span className="hidden sm:inline">{isPublished ? "Publicado" : "Borrador"}</span>
               </button>
             )}
             <Sheet open={menuOpen} onOpenChange={setMenuOpen}>

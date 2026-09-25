@@ -357,9 +357,71 @@ export type Database = {
         }
         Relationships: []
       }
+      restaurant_business_days: {
+        Row: {
+          day_of_week: number
+          id: string
+          is_closed: boolean
+          restaurant_id: string
+        }
+        Insert: {
+          day_of_week: number
+          id?: string
+          is_closed?: boolean
+          restaurant_id: string
+        }
+        Update: {
+          day_of_week?: number
+          id?: string
+          is_closed?: boolean
+          restaurant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_business_days_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      restaurant_business_hour_intervals: {
+        Row: {
+          business_day_id: string
+          close_time: string
+          id: string
+          open_time: string
+          position: number
+        }
+        Insert: {
+          business_day_id: string
+          close_time: string
+          id?: string
+          open_time: string
+          position: number
+        }
+        Update: {
+          business_day_id?: string
+          close_time?: string
+          id?: string
+          open_time?: string
+          position?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_business_hour_intervals_business_day_id_fkey"
+            columns: ["business_day_id"]
+            isOneToOne: false
+            referencedRelation: "restaurant_business_days"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       restaurants: {
         Row: {
           address: string | null
+          allow_reviews: boolean
           bio: string | null
           created_at: string
           cuisine_template: Database["public"]["Enums"]["cuisine_template"]
@@ -380,6 +442,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          allow_reviews?: boolean
           bio?: string | null
           created_at?: string
           cuisine_template?: Database["public"]["Enums"]["cuisine_template"]
@@ -400,6 +463,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          allow_reviews?: boolean
           bio?: string | null
           created_at?: string
           cuisine_template?: Database["public"]["Enums"]["cuisine_template"]
@@ -754,6 +818,10 @@ export type Database = {
         }[]
       }
       recalc_dish_rating: { Args: { _dish_id: string }; Returns: undefined }
+      save_restaurant_business_hours: {
+        Args: { p_restaurant_id: string; p_week: Json }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "owner" | "customer"

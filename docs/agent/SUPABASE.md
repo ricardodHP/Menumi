@@ -85,7 +85,26 @@ Campos de dominio incluyen:
 - status;
 - show_by_rating;
 - show_rating;
+- allow_reviews;
 - timestamps.
+
+La migración `20260925013418_task007_restaurant_information.sql` añade
+`allow_reviews` (true por defecto) y el horario semanal estructurado en
+`restaurant_business_days` + `restaurant_business_hour_intervals`. La semana
+completa de siete días es la fuente preferida una vez configurada; sin filas,
+el menú conserva `restaurants.hours` como fallback legado sin intentar
+parsearlo. Un conjunto parcial se considera error de datos, no fallback. El
+reemplazo completo de la semana usa `public.save_restaurant_business_hours` con
+autorización owner/admin dentro de la operación. Su escritor
+`task007_private.replace_restaurant_business_hours` no tiene EXECUTE para
+`anon`/`authenticated` ni USAGE del esquema para los roles de API. La política
+de inserción de `reviews` consulta `allow_reviews` solo cuando `dish_id IS NULL`;
+las reseñas de platillos mantienen su flujo independiente.
+
+La migración fue aplicada manualmente. Los tipos en
+`src/integrations/supabase/types.ts` están sincronizados con el esquema y
+describen las tablas, la columna y el RPC públicos; el cliente usa esos tipos
+generados directamente.
 
 Estados:
 

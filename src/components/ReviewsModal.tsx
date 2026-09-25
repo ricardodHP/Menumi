@@ -23,17 +23,28 @@ interface ReviewsModalProps {
   dishId?: string;
   /** Notify parent so it can refresh the displayed average. */
   onSubmitted?: () => void;
+  /** Applies only to restaurant-level reviews. Dish reviews remain independently available. */
+  allowRestaurantSubmission?: boolean;
 }
 
 const STORAGE_KEY = "menu_review_name";
 
-const ReviewsModal = ({ open, onClose, title, restaurantId, dishId, onSubmitted }: ReviewsModalProps) => {
+const ReviewsModal = ({
+  open,
+  onClose,
+  title,
+  restaurantId,
+  dishId,
+  onSubmitted,
+  allowRestaurantSubmission = true,
+}: ReviewsModalProps) => {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(false);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const [name, setName] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const canSubmit = dishId !== undefined || allowRestaurantSubmission;
 
   useEffect(() => {
     if (!open) return;
@@ -100,7 +111,7 @@ const ReviewsModal = ({ open, onClose, title, restaurantId, dishId, onSubmitted 
 
         <div className="overflow-y-auto px-4 py-3 space-y-4 flex-1">
           {/* Form */}
-          <div className="rounded-lg border border-border p-3 space-y-3 bg-card">
+          {canSubmit && <div className="rounded-lg border border-border p-3 space-y-3 bg-card">
             <p className="text-sm font-medium text-foreground">Deja tu reseña</p>
             <div className="flex items-center gap-1">
               {[1, 2, 3, 4, 5].map((n) => (
@@ -130,7 +141,7 @@ const ReviewsModal = ({ open, onClose, title, restaurantId, dishId, onSubmitted 
             <Button onClick={handleSubmit} disabled={submitting} className="w-full">
               {submitting ? "Enviando..." : "Enviar reseña"}
             </Button>
-          </div>
+          </div>}
 
           {/* List */}
           <div className="space-y-3">
@@ -140,7 +151,9 @@ const ReviewsModal = ({ open, onClose, title, restaurantId, dishId, onSubmitted 
             {loading ? (
               <p className="text-sm text-muted-foreground">Cargando...</p>
             ) : reviews.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Aún no hay reseñas. ¡Sé el primero!</p>
+              <p className="text-sm text-muted-foreground">
+                {canSubmit ? "Aún no hay reseñas. ¡Sé el primero!" : "Aún no hay reseñas."}
+              </p>
             ) : (
               reviews.map((r) => (
                 <div key={r.id} className="border-b border-border pb-3 last:border-b-0">

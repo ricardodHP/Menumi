@@ -1,5 +1,6 @@
 // Shared shape used across UI components. Data is loaded from the database
 // via useRestaurantData, but the UI components keep working with this shape.
+import type { WeeklyBusinessDay } from "@/lib/business-hours";
 
 export interface Dish {
   id: string;
@@ -30,11 +31,16 @@ export interface RestaurantInfo {
   posts: number;
   whatsappLink: string;
   whatsappEnabled: boolean;
-  instagramLink: string;
+  /** Normalized username. Public URLs are built only at the Instagram boundary. */
+  instagramUsername: string;
   address?: string;
+  /** Legacy free-text fallback while structured business hours are not configured. */
   hours?: string;
+  businessHours?: WeeklyBusinessDay[] | null;
+  businessHoursLoadError?: boolean;
   logo: string;
   cuisineTemplate: "generic" | "mexican" | "italian" | "chinese" | "japanese";
   showByRating: boolean;
   showRating: boolean;
+  allowReviews?: boolean;
 }

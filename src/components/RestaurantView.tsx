@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useEffect, useLayoutEffect, type CSSPro
 import { Link, useSearchParams } from "react-router-dom";
 import { useCart, getStoredName } from "@/contexts/CartContext";
 import { toast } from "sonner";
-import { Grid3X3, Star, Search, X, User } from "lucide-react";
+import { Grid3X3, Star, Search, X, User, MessageSquare } from "lucide-react";
 import { useAuth, getDefaultRouteForRoles } from "@/contexts/AuthContext";
 import ProfileHeader from "@/components/ProfileHeader";
 import CategoryStories from "@/components/CategoryStories";
@@ -130,12 +130,9 @@ const RestaurantView = ({ restaurant, categories, dishes, isPreview = false }: R
     }
   };
 
-  const avgRating = useMemo(() => {
-    if (!restaurant.showRating) return null;
-    if (dishes.length === 0) return null;
-    const sum = dishes.reduce((s, d) => s + d.rating, 0);
-    return (sum / dishes.length).toFixed(1);
-  }, [dishes, restaurant.showRating, refreshTick]);
+  const avgRating = restaurant.showRating && dishes.length > 0
+    ? (dishes.reduce((sum, dish) => sum + dish.rating, 0) / dishes.length).toFixed(1)
+    : null;
 
   const activeCategoryName = useMemo(() => {
     if (searchQuery.trim()) return `Resultados: "${searchQuery.trim()}"`;
@@ -169,14 +166,23 @@ const RestaurantView = ({ restaurant, categories, dishes, isPreview = false }: R
           <Link to={accountHref} className="text-foreground" aria-label={user ? "Mi cuenta" : "Iniciar sesión"}>
             <User className="w-5 h-5" />
           </Link>
-          {avgRating && !isPreview && (
+          {!isPreview && (
             <button
               onClick={() => setRestaurantReviewsOpen(true)}
               className="flex items-center gap-1 text-accent hover:opacity-80 transition-opacity"
-              aria-label="Ver y dejar reseñas"
+              aria-label="Ver reseñas del restaurante"
             >
-              <Star className="w-4 h-4 fill-accent" />
-              <span className="text-sm font-semibold text-foreground">{avgRating}</span>
+              {restaurant.showRating && avgRating ? (
+                <>
+                  <Star className="w-4 h-4 fill-accent" />
+                  <span className="text-sm font-semibold text-foreground">{avgRating}</span>
+                </>
+              ) : (
+                <>
+                  <MessageSquare className="w-4 h-4" />
+                  <span className="text-sm font-semibold text-foreground">Reseñas</span>
+                </>
+              )}
             </button>
           )}
         </div>
@@ -267,12 +273,13 @@ const RestaurantView = ({ restaurant, categories, dishes, isPreview = false }: R
       <AssistantModal open={assistantOpen} onClose={() => setAssistantOpen(false)} dishes={dishes} />
       <CartFloatingButton />
       <CartModal isPreview={isPreview} />
-      {restaurant.showRating && !isPreview && (
+      {!isPreview && (
         <ReviewsModal
           open={restaurantReviewsOpen}
           onClose={() => setRestaurantReviewsOpen(false)}
           title={`Reseñas de ${restaurant.name}`}
           restaurantId={restaurant.id}
+          allowRestaurantSubmission={restaurant.allowReviews !== false}
           onSubmitted={handleReviewSubmitted}
         />
       )}

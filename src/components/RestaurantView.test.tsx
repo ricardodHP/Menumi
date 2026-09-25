@@ -5,6 +5,7 @@ import type { Category, Dish, RestaurantInfo } from "@/data/restaurant";
 import RestaurantView from "./RestaurantView";
 
 const trackEventMock = vi.hoisted(() => vi.fn());
+const reviewsModalMock = vi.hoisted(() => ({ onRender: vi.fn() }));
 
 vi.mock("@/lib/analytics", () => ({
   trackEvent: trackEventMock,
@@ -37,7 +38,12 @@ vi.mock("@/components/CartFloatingButton", () => ({ default: () => null }));
 vi.mock("@/components/CartModal", () => ({ default: () => null }));
 vi.mock("@/components/AssistantFloatingButton", () => ({ default: () => null }));
 vi.mock("@/components/AssistantModal", () => ({ default: () => null }));
-vi.mock("@/components/ReviewsModal", () => ({ default: () => null }));
+vi.mock("@/components/ReviewsModal", () => ({
+  default: (props: { open: boolean; allowRestaurantSubmission?: boolean }) => {
+    reviewsModalMock.onRender(props);
+    return props.open ? <div data-testid="restaurant-reviews-modal" /> : null;
+  },
+}));
 
 const restaurant = {
   id: "restaurant-1",
@@ -47,7 +53,7 @@ const restaurant = {
   posts: 0,
   whatsappLink: "",
   whatsappEnabled: false,
-  instagramLink: "",
+  instagramUsername: "",
   logo: "/logo.jpg",
   cuisineTemplate: "generic",
   showByRating: false,
@@ -129,6 +135,26 @@ describe("RestaurantView analytics boundary", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.queryByRole("button", { name: "Ver y dejar reseñas" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Ver reseñas del restaurante" })).not.toBeInTheDocument();
+  });
+
+  it("keeps restaurant review access when the aggregate rating is hidden", () => {
+    render(
+      <MemoryRouter>
+        <RestaurantView
+          restaurant={{ ...restaurant, showRating: false, allowReviews: false }}
+          categories={categories}
+          dishes={[dish]}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByText("4.5")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Ver reseñas del restaurante" }));
+    expect(screen.getByTestId("restaurant-reviews-modal")).toBeInTheDocument();
+    expect(reviewsModalMock.onRender).toHaveBeenLastCalledWith(expect.objectContaining({
+      open: true,
+      allowRestaurantSubmission: false,
+    }));
   });
 });

@@ -12,7 +12,7 @@ vi.mock("@/contexts/AuthContext", () => ({
 
 vi.mock("@/hooks/useManagedRestaurant", () => ({
   useManagedRestaurant: () => ({
-    restaurant: { id: "restaurant-1", status: "published" },
+    restaurant: { id: "restaurant-1", name: "Taquería Los Hermanos de Guadalajara", status: "published" },
     reload: vi.fn(),
   }),
 }));
@@ -31,6 +31,18 @@ vi.mock("sonner", () => ({
 }));
 
 describe("DashboardLayout MVP navigation", () => {
+  it("uses a compact mobile label and a bounded restaurant name on desktop", () => {
+    render(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <DashboardLayout>Contenido</DashboardLayout>
+      </MemoryRouter>,
+    );
+
+    const heading = screen.getByRole("heading", { name: /Restaurante Taquería Los Hermanos de Guadalajara/i });
+    expect(heading.querySelector("span:first-child")).toHaveTextContent("Restaurante");
+    expect(heading.querySelector("span:last-child")).toHaveClass("truncate");
+  });
+
   it("exposes only active pilot modules in the navigation drawer", () => {
     render(
       <MemoryRouter initialEntries={["/dashboard"]}>

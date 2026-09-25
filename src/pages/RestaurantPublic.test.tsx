@@ -33,7 +33,7 @@ const restaurant = {
   posts: 0,
   whatsappLink: "",
   whatsappEnabled: false,
-  instagramLink: "",
+  instagramUsername: "",
   logo: "/seed/restaurant-logo.png",
   cuisineTemplate: "generic",
   showByRating: false,

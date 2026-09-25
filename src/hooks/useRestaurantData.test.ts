@@ -62,6 +62,7 @@ const supabaseMock = vi.hoisted(() => {
     type Query = {
       select: () => Query;
       eq: (column: string, value: unknown) => Query;
+      in: () => Query;
       order: () => Promise<{ data: typeof categoryRows | typeof dishRows; error: null }>;
       maybeSingle: () => Promise<{ data: typeof restaurant | null; error: null }>;
       not: () => Promise<{ data: Array<{ dish_id: string | null }>; error: null }>;
@@ -75,8 +76,15 @@ const supabaseMock = vi.hoisted(() => {
       }
       return query;
     }) as Query["eq"];
-    query.order = vi.fn(() =>
-      Promise.resolve({ data: table === "categories" ? categoryRows : dishRows, error: null }),
+    query.in = vi.fn(() => query) as Query["in"];
+    query.order = vi.fn(() => Promise.resolve({
+      data: table === "categories"
+        ? categoryRows
+        : table === "dishes"
+          ? dishRows
+          : [],
+      error: null,
+    }),
     ) as Query["order"];
     query.maybeSingle = vi.fn(() =>
       Promise.resolve({

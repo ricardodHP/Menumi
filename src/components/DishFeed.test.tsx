@@ -44,7 +44,7 @@ const restaurant = {
   posts: 1,
   whatsappLink: "",
   whatsappEnabled: false,
-  instagramLink: "",
+  instagramUsername: "",
   logo: "/logo.jpg",
   cuisineTemplate: "generic",
   showByRating: false,
