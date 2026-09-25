@@ -21,9 +21,9 @@ const ProfileHeader = ({ restaurant }: ProfileHeaderProps) => {
     : null;
   return (
     <div className="px-4 pt-4 pb-2 md:mx-auto md:max-w-4xl md:px-10 md:py-8">
-      <div className="md:grid md:grid-cols-[180px_minmax(0,1fr)] md:items-center md:gap-x-10 md:gap-y-4">
+      <div className="sm:grid sm:grid-cols-[104px_minmax(0,1fr)] sm:items-center sm:gap-x-5 sm:gap-y-3 md:grid-cols-[180px_minmax(0,1fr)] md:gap-x-10 md:gap-y-4">
         {/* Restaurant identity */}
-        <div className="flex items-center gap-4 mb-3 md:row-span-2 md:mb-0 md:justify-center">
+        <div className="flex items-center gap-4 mb-3 sm:row-span-2 sm:mb-0 sm:justify-center">
           <div className="story-ring shrink-0">
             <div className="rounded-full overflow-hidden bg-background p-[2px]">
               <img
@@ -31,22 +31,22 @@ const ProfileHeader = ({ restaurant }: ProfileHeaderProps) => {
                 alt={restaurant.name}
                 width={128}
                 height={128}
-                className="rounded-full w-[86px] h-[86px] object-cover md:w-32 md:h-32"
+                className="rounded-full w-[86px] h-[86px] object-cover sm:w-24 sm:h-24 md:w-32 md:h-32"
               />
             </div>
           </div>
         </div>
 
         {/* Name + Bio */}
-        <div className="mb-3 md:mb-0">
-          <h1 className="text-sm font-bold text-foreground md:text-xl">{restaurant.name}</h1>
+        <div className="mb-3 sm:mb-0">
+          <h1 className="text-sm font-bold text-foreground sm:text-lg md:text-xl">{restaurant.name}</h1>
           {restaurant.bio && (
-            <p className="text-sm text-foreground whitespace-pre-line mt-1 leading-relaxed md:text-base">
+            <p className="text-sm text-foreground whitespace-pre-line mt-1 leading-relaxed sm:text-base">
               {restaurant.bio}
             </p>
           )}
           {(restaurant.address || restaurant.hours || restaurant.businessHours || restaurant.businessHoursLoadError) && (
-            <div className="text-xs text-muted-foreground mt-2 space-y-0.5 md:text-sm">
+            <div className="text-xs text-muted-foreground mt-2 space-y-0.5 sm:text-sm">
               {restaurant.address && <p>📍 {restaurant.address}</p>}
               {restaurant.businessHoursLoadError ? (
                 <p role="status">🕒 No se pudieron cargar los horarios.</p>
@@ -69,7 +69,7 @@ const ProfileHeader = ({ restaurant }: ProfileHeaderProps) => {
         </div>
 
         {/* Action buttons */}
-        <div className="flex gap-2 mb-2 md:mb-0">
+        <div className="flex gap-2 mb-2 sm:mb-0">
           {instagramUrl && (
             <Button asChild variant="default" size="sm" className="flex-1 h-8 text-xs font-semibold md:flex-none md:px-6">
               <a href={instagramUrl} target="_blank" rel="noopener noreferrer">

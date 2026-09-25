@@ -207,10 +207,6 @@ const RestaurantView = ({ restaurant, categories, dishes, isPreview = false }: R
         </div>
       )}
 
-      {tpl.decorationGradient && (
-        <div className="h-3" style={{ background: tpl.decorationGradient }} aria-hidden />
-      )}
-
       <ProfileHeader restaurant={restaurant} />
 
       <CategoryStories

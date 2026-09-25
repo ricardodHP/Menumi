@@ -148,6 +148,12 @@ export default function DashboardStats() {
     .map((entry) => ({ ...entry, category: categoryById.get(entry.categoryId) }))
     .filter((entry) => entry.category)
     .slice(0, 5);
+  const visibleOpportunities = opportunities.opportunities
+    .map((opportunity) => ({
+      ...opportunity,
+      dish: dishById.get(opportunity.dishId),
+    }))
+    .filter((opportunity) => opportunity.dish);
 
   return (
     <DashboardLayout>
@@ -213,6 +219,11 @@ export default function DashboardStats() {
             )}
           </div>
 
+          <PeriodSummaryCard
+            opportunities={visibleOpportunities}
+            eligibleDishCount={opportunities.eligibleDishCount}
+          />
+
           {stats.activityEventCount === 0 && (
             <p role="status" className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
               Aún no hay actividad suficiente para mostrar estadísticas en {rangeLabel[range].toLowerCase()}.
@@ -220,10 +231,7 @@ export default function DashboardStats() {
           )}
 
           <OpportunitiesCard
-            opportunities={opportunities.opportunities.map((opportunity) => ({
-              ...opportunity,
-              dish: dishById.get(opportunity.dishId),
-            })).filter((opportunity) => opportunity.dish)}
+            opportunities={visibleOpportunities}
             eligibleDishCount={opportunities.eligibleDishCount}
             periodLabel={rangeLabel[range].toLowerCase()}
           />
@@ -336,6 +344,57 @@ function ListCard({
             ))}
           </ol>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function PeriodSummaryCard({
+  opportunities,
+  eligibleDishCount,
+}: {
+  opportunities: {
+    kind: "many_views_few_adds" | "high_add_rate";
+    addRate: number;
+    viewingSessions: number;
+    viewingSessionsWithAdd: number;
+    dish: DishMeta | undefined;
+  }[];
+  eligibleDishCount: number;
+}) {
+  const standout = opportunities.find(
+    (opportunity) => opportunity.kind === "high_add_rate" && opportunity.dish,
+  );
+  const needsAttention = opportunities.find(
+    (opportunity) => opportunity.kind === "many_views_few_adds" && opportunity.dish,
+  );
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-semibold">Resumen del período</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2 pt-0 text-sm">
+        {standout?.dish && (
+          <p>
+            <span className="font-semibold">{standout.dish.name}</span> destacó entre los platillos comparables: {standout.viewingSessionsWithAdd} de {standout.viewingSessions} sesiones que lo vieron también registraron un agregado a Mi pedido ({Math.round(standout.addRate)}%).
+          </p>
+        )}
+        {needsAttention?.dish && (
+          <p>
+            <span className="font-semibold">{needsAttention.dish.name}</span> tuvo una tasa de agregado menor que otros platillos comparables: solo {needsAttention.viewingSessionsWithAdd} de {needsAttention.viewingSessions} sesiones que lo vieron también registraron un agregado a Mi pedido ({Math.round(needsAttention.addRate)}%).
+          </p>
+        )}
+        {!standout && !needsAttention && (
+          <p className="text-muted-foreground">
+            {eligibleDishCount < 2
+              ? "Aún faltan datos para comparar platillos. Se necesitan al menos dos con 10 o más sesiones de vista."
+              : "No se detectaron diferencias suficientemente claras entre los platillos comparables en este período."}
+          </p>
+        )}
+        <p className="text-xs text-muted-foreground">
+          Se comparan platillos con al menos 10 sesiones de vista. Los agregados no representan ventas confirmadas.
+        </p>
       </CardContent>
     </Card>
   );

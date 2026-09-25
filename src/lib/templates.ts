@@ -7,8 +7,6 @@ export interface TemplateStyles {
   emoji: string;
   // Google font family (already loaded globally via index.css).
   fontFamily?: string;
-  // Optional background CSS for an extra decorative band behind the profile header.
-  decorationGradient?: string;
 }
 
 export const templateStyles: Record<RestaurantInfo["cuisineTemplate"], TemplateStyles> = {
@@ -30,8 +28,6 @@ export const templateStyles: Record<RestaurantInfo["cuisineTemplate"], TemplateS
     },
     emoji: "🌮",
     fontFamily: "'Inter', sans-serif",
-    decorationGradient:
-      "linear-gradient(135deg, hsl(16 80% 55% / 0.10), hsl(140 50% 45% / 0.10))",
   },
   italian: {
     vars: {
@@ -47,8 +43,6 @@ export const templateStyles: Record<RestaurantInfo["cuisineTemplate"], TemplateS
     },
     emoji: "🍝",
     fontFamily: "'Playfair Display', 'Inter', serif",
-    decorationGradient:
-      "linear-gradient(135deg, hsl(0 65% 45% / 0.10), hsl(140 40% 38% / 0.10))",
   },
   chinese: {
     vars: {
@@ -64,8 +58,6 @@ export const templateStyles: Record<RestaurantInfo["cuisineTemplate"], TemplateS
     },
     emoji: "🥡",
     fontFamily: "'Inter', sans-serif",
-    decorationGradient:
-      "linear-gradient(135deg, hsl(0 75% 45% / 0.12), hsl(45 90% 55% / 0.12))",
   },
   japanese: {
     vars: {
@@ -81,8 +73,6 @@ export const templateStyles: Record<RestaurantInfo["cuisineTemplate"], TemplateS
     },
     emoji: "🍣",
     fontFamily: "'Inter', sans-serif",
-    decorationGradient:
-      "linear-gradient(135deg, hsl(350 70% 50% / 0.10), hsl(220 15% 25% / 0.10))",
   },
 };
 
