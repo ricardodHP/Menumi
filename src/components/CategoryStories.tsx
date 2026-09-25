@@ -47,7 +47,9 @@ const CategoryStories = ({ categories, activeCategory, onCategoryClick }: Catego
     <div className="px-2 py-3 border-b border-border relative">
       <div
         ref={scrollRef}
-        className="flex gap-4 overflow-x-auto scrollbar-hide px-2 scroll-smooth"
+        className={`flex gap-4 overflow-x-auto scrollbar-hide px-2 scroll-smooth ${
+          hasOverflow ? "lg:justify-start" : "lg:justify-center"
+        }`}
       >
         {all.map((cat) => (
           <button

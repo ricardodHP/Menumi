@@ -11,7 +11,7 @@ El menú público sigue un patrón deliberadamente visual inspirado en interacci
 - perfil superior;
 - categorías horizontales tipo stories;
 - grid de platillos;
-- feed vertical de detalle;
+- feed vertical de detalle en móvil y cuadrícula de tarjetas en escritorio;
 - imágenes protagonistas;
 - acciones rápidas;
 - navegación mobile-first.
@@ -83,14 +83,14 @@ Prioridades:
 
 - imagen;
 - reconocimiento visual;
-- densidad adecuada en móvil;
+- densidad adecuada en móvil y escritorio;
 - transición clara al detalle.
 
 No sobrecargar cada tarjeta con todos los metadatos del platillo.
 
 ## Feed
 
-`DishFeed` es la vista detallada y vertical.
+`DishFeed` conserva una vista detallada vertical en móvil. En pantallas grandes organiza los platillos en una cuadrícula de tres columnas con tarjetas cuadradas estilo Instagram.
 
 Comportamientos actuales relevantes:
 

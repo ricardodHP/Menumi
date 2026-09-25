@@ -149,7 +149,7 @@ const RestaurantView = ({ restaurant, categories, dishes, isPreview = false }: R
   }, []);
 
   return (
-    <div className="max-w-lg mx-auto min-h-screen bg-background" style={rootStyle}>
+    <div className="mx-auto min-h-screen max-w-6xl bg-background" style={rootStyle}>
       {/* Top bar */}
       <div className="sticky top-0 z-20 bg-background border-b border-border px-4 py-2.5 flex items-center justify-between">
         <h2 className="text-base font-bold text-foreground">

@@ -118,9 +118,10 @@ const DishFeed = ({
       </div>
 
       {/* Scrollable feed */}
-      <div ref={scrollRef} className="overflow-y-auto h-[calc(100vh-57px)]">
+      <div ref={scrollRef} className="h-[calc(100vh-57px)] overflow-y-auto lg:px-6 lg:py-6">
+        <div className="lg:mx-auto lg:grid lg:max-w-7xl lg:grid-cols-3 lg:gap-6">
         {dishes.map((dish) => (
-          <div key={dish.id} className="border-b border-border animate-fade-in">
+          <div key={dish.id} className="border-b border-border animate-fade-in lg:overflow-hidden lg:rounded-xl lg:border">
             {/* Dish image */}
             <div
               className="aspect-square w-full relative select-none"
@@ -258,6 +259,7 @@ const DishFeed = ({
             </div>
           </div>
         ))}
+        </div>
       </div>
 
       {/* Image lightbox */}
