@@ -1,9 +1,11 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export type EventType = "view" | "cart_add" | "category_view" | "whatsapp_clicked";
+export type EventType = "menu_view" | "dish_view" | "selection_add" | "category_view" | "whatsapp_clicked";
 
 const ANALYTICS_SESSION_KEY = "culinary_feed_analytics_session:v1";
+const MENU_VIEW_KEY_PREFIX = "culinary_feed_menu_view:v1:";
 let fallbackSessionId: string | null = null;
+const fallbackMenuViews = new Set<string>();
 
 function createSessionId(): string {
   const cryptoApi = globalThis.crypto;
@@ -40,17 +42,44 @@ export async function trackEvent(params: {
   eventType: EventType;
   dishId?: string;
   categoryId?: string;
+  isPreview: boolean;
 }) {
+  if (params.isPreview) return;
+
   try {
     const event = {
       restaurant_id: params.restaurantId,
       dish_id: params.dishId ?? null,
       category_id: params.categoryId ?? null,
       event_type: params.eventType,
-      ...(params.eventType === "whatsapp_clicked" ? { session_id: getAnonymousSessionId() } : {}),
+      session_id: getAnonymousSessionId(),
     };
-    await supabase.from("dish_events").insert(event);
-  } catch {
-    // analytics is best-effort, never block UI
+    const { error } = await supabase.from("dish_events").insert(event);
+    if (error && import.meta.env.DEV) {
+      console.warn("Analytics event insert failed", error);
+    }
+  } catch (error) {
+    if (import.meta.env.DEV) console.warn("Analytics event insert failed", error);
   }
+}
+
+/** Record one menu open per restaurant for the lifetime of this browser tab. */
+export function trackMenuViewOnce(params: { restaurantId: string; isPreview: boolean }): void {
+  if (params.isPreview) return;
+
+  const storageKey = `${MENU_VIEW_KEY_PREFIX}${params.restaurantId}`;
+  try {
+    if (sessionStorage.getItem(storageKey)) return;
+    // Mark before dispatch so React remounts and failed inserts do not inflate traffic.
+    sessionStorage.setItem(storageKey, "1");
+  } catch {
+    if (fallbackMenuViews.has(params.restaurantId)) return;
+    fallbackMenuViews.add(params.restaurantId);
+  }
+
+  void trackEvent({
+    restaurantId: params.restaurantId,
+    eventType: "menu_view",
+    isPreview: false,
+  });
 }

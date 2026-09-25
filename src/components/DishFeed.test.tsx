@@ -101,7 +101,7 @@ describe("DishFeed analytics boundary", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("keeps tracking normal public dish views and cart additions", () => {
+  it("tracks an intentionally opened dish and one selection add", () => {
     render(
       <DishFeed
         dishes={[dish]}
@@ -113,16 +113,20 @@ describe("DishFeed analytics boundary", () => {
 
     expect(trackEventMock).toHaveBeenCalledWith({
       restaurantId: "restaurant-1",
-      eventType: "view",
+      eventType: "dish_view",
       dishId: "dish-1",
+      categoryId: "category-1",
+      isPreview: false,
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Agregar" }));
 
     expect(trackEventMock).toHaveBeenCalledWith({
       restaurantId: "restaurant-1",
-      eventType: "cart_add",
+      eventType: "selection_add",
       dishId: "dish-1",
+      categoryId: "category-1",
+      isPreview: false,
     });
   });
 });

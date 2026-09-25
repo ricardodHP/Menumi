@@ -125,6 +125,7 @@ const RestaurantView = ({ restaurant, categories, dishes, isPreview = false }: R
         restaurantId: restaurant.id,
         eventType: "category_view",
         categoryId,
+        isPreview,
       });
     }
   };

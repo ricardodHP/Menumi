@@ -89,7 +89,7 @@ const CartModal = ({ isPreview = false }: CartModalProps) => {
   const handleWhatsAppClick = () => {
     if (!whatsappUrl || !restaurant) return;
     if (!isPreview) {
-      trackEvent({ restaurantId: restaurant.id, eventType: "whatsapp_clicked" });
+      trackEvent({ restaurantId: restaurant.id, eventType: "whatsapp_clicked", isPreview });
     }
     window.open(whatsappUrl, "_blank", "noopener,noreferrer");
   };

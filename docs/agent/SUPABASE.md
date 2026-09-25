@@ -41,6 +41,8 @@ Reglas:
 
 TASK004: los tipos se regeneraron desde el proyecto remoto enlazado mediante la descarga oficial del panel Supabase; incluyen `restaurants.whatsapp_enabled`, `dish_events.session_id` y `dish_event_type.whatsapp_clicked`.
 
+TASK005: la migración local añade `menu_view`, `dish_view` y `selection_add`. La aplicación remota y la regeneración de tipos quedan pendientes; no se editó manualmente el archivo generado.
+
 ## Entidades activas principales
 
 ### profiles
@@ -156,6 +158,9 @@ Existe lógica de recálculo del rating del platillo tras cambios de reviews.
 
 Eventos:
 
+- menu_view;
+- dish_view;
+- selection_add;
 - view;
 - cart_add;
 - category_view;
@@ -172,7 +177,7 @@ Incluye:
 
 Owner/admin leen según RLS.
 
-La inserción pública actual es amplia.
+Los eventos nuevos requieren `session_id`, restaurante publicado y forma coherente de IDs. `dish_view` y `selection_add` validan platillo activo y pertenencia tenant; `category_view` valida categoría visible y pertenencia tenant. Las filas históricas `view` y `cart_add` se conservan sin reinterpretarse; la política rechaza nuevos inserts con esos tipos.
 
 Consulta `ANALYTICS.md`.
 
@@ -398,7 +403,7 @@ Cuando aplique, validar:
 
 ### dish_events
 
-Insert público demasiado permisivo para considerarlo antifraude.
+RLS valida evento, restaurante publicado y coherencia de IDs. No hay rate limiting: las métricas no son antifraude y clientes anónimos aún pueden fabricar eventos/UUIDs válidos.
 
 ### .env
 

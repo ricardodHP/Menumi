@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, Link, useSearchParams } from "react-router-dom";
 import { useRestaurantData } from "@/hooks/useRestaurantData";
 import RestaurantView from "@/components/RestaurantView";
@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useTableSession } from "@/hooks/useTableSession";
 import { Users, X, Receipt } from "lucide-react";
 import TableOrdersDrawer from "@/components/TableOrdersDrawer";
+import { trackMenuViewOnce } from "@/lib/analytics";
 
 export default function RestaurantPublic() {
   const { slug } = useParams<{ slug: string }>();
@@ -14,6 +15,12 @@ export default function RestaurantPublic() {
   const { loading, notFound, restaurant, categories, dishes } = useRestaurantData(slug, { preview });
   const { session, leave } = useTableSession();
   const [ordersOpen, setOrdersOpen] = useState(false);
+
+  useEffect(() => {
+    if (!loading && !notFound && restaurant) {
+      trackMenuViewOnce({ restaurantId: restaurant.id, isPreview: preview });
+    }
+  }, [loading, notFound, preview, restaurant]);
 
   if (loading) {
     return (

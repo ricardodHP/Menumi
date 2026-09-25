@@ -5,6 +5,7 @@ import type { Category, Dish, RestaurantInfo } from "@/data/restaurant";
 import RestaurantPublic from "./RestaurantPublic";
 
 const useRestaurantDataMock = vi.hoisted(() => vi.fn());
+const trackMenuViewOnceMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/hooks/useRestaurantData", () => ({
   useRestaurantData: useRestaurantDataMock,
@@ -12,6 +13,10 @@ vi.mock("@/hooks/useRestaurantData", () => ({
 
 vi.mock("@/hooks/useTableSession", () => ({
   useTableSession: () => ({ session: null, leave: vi.fn() }),
+}));
+
+vi.mock("@/lib/analytics", () => ({
+  trackMenuViewOnce: trackMenuViewOnceMock,
 }));
 
 vi.mock("@/components/RestaurantView", () => ({
@@ -47,6 +52,7 @@ describe("RestaurantPublic preview boundary", () => {
   beforeEach(() => {
     useRestaurantDataMock.mockReset();
     useRestaurantDataMock.mockReturnValue(emptyMenu);
+    trackMenuViewOnceMock.mockReset();
   });
 
   it("uses preview mode explicitly and explains when a draft is being inspected", () => {
@@ -61,6 +67,7 @@ describe("RestaurantPublic preview boundary", () => {
     expect(useRestaurantDataMock).toHaveBeenCalledWith("dragon-dorado", { preview: true });
     expect(screen.getByText(/vista previa/i)).toBeInTheDocument();
     expect(screen.getByText("Menú de Dragón Dorado")).toBeInTheDocument();
+    expect(trackMenuViewOnceMock).toHaveBeenCalledWith({ restaurantId: "restaurant-1", isPreview: true });
   });
 
   it("uses the published boundary for the regular public URL", () => {
@@ -74,6 +81,8 @@ describe("RestaurantPublic preview boundary", () => {
 
     expect(useRestaurantDataMock).toHaveBeenCalledWith("dragon-dorado", { preview: false });
     expect(screen.queryByText(/vista previa/i)).not.toBeInTheDocument();
+    expect(trackMenuViewOnceMock).toHaveBeenCalledTimes(1);
+    expect(trackMenuViewOnceMock).toHaveBeenCalledWith({ restaurantId: "restaurant-1", isPreview: false });
   });
 
   it("renders the unavailable state for an invalid slug", () => {
@@ -93,5 +102,6 @@ describe("RestaurantPublic preview boundary", () => {
     );
 
     expect(screen.getByText("Restaurante no encontrado")).toBeInTheDocument();
+    expect(trackMenuViewOnceMock).not.toHaveBeenCalled();
   });
 });

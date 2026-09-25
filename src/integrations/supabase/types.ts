@@ -768,6 +768,9 @@ export type Database = {
         | "cart_add"
         | "category_view"
         | "whatsapp_clicked"
+        | "menu_view"
+        | "dish_view"
+        | "selection_add"
       order_status:
         | "pending"
         | "preparing"
@@ -919,6 +922,9 @@ export const Constants = {
         "cart_add",
         "category_view",
         "whatsapp_clicked",
+        "menu_view",
+        "dish_view",
+        "selection_add",
       ],
       order_status: ["pending", "preparing", "ready", "delivered", "cancelled"],
       restaurant_status: ["draft", "published"],

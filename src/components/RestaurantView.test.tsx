@@ -107,7 +107,14 @@ describe("RestaurantView analytics boundary", () => {
       restaurantId: "restaurant-1",
       eventType: "category_view",
       categoryId: "category-1",
+      isPreview: false,
     });
+  });
+
+  it("does not count dish cards as intentional dish views", () => {
+    renderView();
+
+    expect(trackEventMock).not.toHaveBeenCalled();
   });
 
   it("does not expose restaurant review submission in preview", () => {

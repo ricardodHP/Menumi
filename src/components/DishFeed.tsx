@@ -87,12 +87,18 @@ const DishFeed = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Track view per dish (once per session)
+  // Track the dish explicitly opened in the feed; card rendering alone is not a view.
   useEffect(() => {
     const dish = dishes[startIndex];
     if (!isPreview && dish && !trackedRef.current.has(dish.id)) {
       trackedRef.current.add(dish.id);
-      trackEvent({ restaurantId: restaurant.id, eventType: "view", dishId: dish.id });
+      trackEvent({
+        restaurantId: restaurant.id,
+        eventType: "dish_view",
+        dishId: dish.id,
+        categoryId: dish.category || undefined,
+        isPreview,
+      });
     }
   }, [startIndex, dishes, restaurant.id, isPreview]);
 
@@ -167,7 +173,13 @@ const DishFeed = ({
                   onClick={() => {
                     addItem(dish);
                     if (!isPreview) {
-                      trackEvent({ restaurantId: restaurant.id, eventType: "cart_add", dishId: dish.id });
+                      trackEvent({
+                        restaurantId: restaurant.id,
+                        eventType: "selection_add",
+                        dishId: dish.id,
+                        categoryId: dish.category || undefined,
+                        isPreview,
+                      });
                     }
                   }}
                   className="flex items-center gap-1.5 bg-primary text-primary-foreground text-xs font-semibold px-3 py-1.5 rounded-full hover:opacity-90 transition-opacity active:scale-95"

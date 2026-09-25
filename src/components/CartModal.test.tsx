@@ -147,6 +147,23 @@ describe("CartModal local selection copy", () => {
     expect(updateQuantityMock).toHaveBeenCalledWith("dish-a", 0);
   });
 
+  it("treats quantity changes as selection management, not a new selection_add", () => {
+    const dish: Dish = {
+      id: "dish-a", name: "Lasagna", description: "Pasta", price: 180,
+      image: "/lasagna.jpg", category: "main", rating: 4.8, likes: 10,
+      tags: [], showRating: true,
+    };
+    cartState.items = [{ dish, quantity: 1 }];
+    cartState.totalItems = 1;
+    cartState.totalPrice = 180;
+
+    renderModal();
+    fireEvent.click(screen.getByRole("button", { name: "Aumentar Lasagna" }));
+
+    expect(updateQuantityMock).toHaveBeenCalledWith("dish-a", 2);
+    expect(trackEventMock).not.toHaveBeenCalled();
+  });
+
   it("keeps the public Mi pedido modal review-only even when a table session exists", () => {
     const dish: Dish = {
       id: "dish-a",
@@ -257,6 +274,7 @@ describe("CartModal local selection copy", () => {
     expect(trackEventMock).toHaveBeenCalledWith({
       restaurantId: "restaurant-a",
       eventType: "whatsapp_clicked",
+      isPreview: false,
     });
     expect(openSpy).toHaveBeenCalledWith(
       expect.stringMatching(/^https:\/\/wa\.me\/525512345678\?text=/),

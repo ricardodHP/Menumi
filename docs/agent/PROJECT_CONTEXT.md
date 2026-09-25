@@ -184,13 +184,7 @@ Una tarea específica de seguridad debe revisar:
 
 ### Integridad de analytics
 
-`dish_events` permite actualmente inserción pública amplia para soportar tracking anónimo.
-
-Consecuencia:
-
-- las métricas pueden contaminarse;
-- no deben considerarse antifraude;
-- no deben presentarse como ventas ni pedidos confirmados.
+`dish_events` acepta tracking anónimo solo para restaurantes publicados y formas válidas de evento/IDs por tenant. Aún se pueden fabricar eventos y UUIDs de sesión; no es antifraude y no representa ventas ni pedidos confirmados.
 
 Consulta `ANALYTICS.md`.
 

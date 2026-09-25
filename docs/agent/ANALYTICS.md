@@ -12,30 +12,50 @@ Tabla principal:
 
 `public.dish_events`
 
-Eventos actuales:
+Eventos canónicos de captura:
 
-- `view`;
-- `cart_add`;
+- `menu_view`;
+- `dish_view`;
+- `selection_add`;
 - `category_view`;
 - `whatsapp_clicked`.
+
+`view` y `cart_add` permanecen en el enum y en filas históricas. No se reescriben ni se interpretan como si se hubieran capturado con los nombres nuevos. Statistics aún consume sus métricas históricas.
 
 El tracking se realiza desde frontend mediante:
 
 `src/lib/analytics.ts`
 
-La función `trackEvent` es best-effort y no debe bloquear la UX principal.
+La función `trackEvent` es best-effort y no debe bloquear la UX principal. Todo evento nuevo lleva el mismo UUID anónimo del tab en `session_id`; `created_at` lo asigna PostgreSQL.
+
+El UUID vive en `sessionStorage`: se comparte en SPA navigation y refresh del tab, un tab nuevo puede tener otro, y cambiar de restaurante no lo reemplaza. No se usan cookies, fingerprinting ni login de cliente.
 
 ## Exclusión de preview
 
-El menú abierto con `/r/:slug?preview=1` es una vista de inspección para el owner/admin y no registra eventos públicos `view`, `cart_add`, `category_view` ni `whatsapp_clicked`. La interacción visual y el carrito pueden seguir funcionando, pero no deben inflar las métricas del menú publicado.
+El menú abierto con `/r/:slug?preview=1` es una vista de inspección para el owner/admin y no registra `menu_view`, `dish_view`, `selection_add`, `category_view` ni `whatsapp_clicked`. La utilidad central también rechaza tracking marcado como preview. La interacción visual y el carrito pueden seguir funcionando, pero no deben inflar las métricas del menú publicado.
 
-El menú publicado sin `preview=1` conserva el tracking actual.
+El menú publicado sin `preview=1` emite únicamente los eventos definidos abajo.
 
 ## Semántica actual de eventos
 
-### view
+| Evento | Significado |
+|---|---|
+| `menu_view` | Una sesión anónima abrió el menú del restaurante. |
+| `dish_view` | El cliente abrió intencionalmente el detalle de un platillo. |
+| `selection_add` | El cliente agregó intencionalmente un platillo a “Mi pedido”. |
+| `whatsapp_clicked` | El cliente activó intencionalmente el CTA de WhatsApp. |
 
-Se registra cuando se abre un platillo en el flujo de `DishFeed`.
+`category_view` también se conserva para la activación de una categoría persistente. Ningún evento representa ventas, pedidos completados, pedidos confirmados ni pagos.
+
+### menu_view
+
+Se registra al cargar un menú publicado en `/r/:slug`. Se deduplica por restaurante con un marcador en `sessionStorage`, por lo que refresh, navegación SPA y remounts no generan otro evento durante el mismo tab. Otro restaurante puede generar su propio `menu_view` con el mismo `session_id`.
+
+No equivale a una vista de platillo.
+
+### dish_view
+
+Se registra cuando se abre intencionalmente un platillo en el flujo de `DishFeed`, no por renderizar su tarjeta. Dentro de una instancia del feed se evita repetir el mismo platillo por rerenders. Una nueva apertura puede generar otro evento.
 
 No equivale a:
 
@@ -45,9 +65,9 @@ No equivale a:
 - lectura completa;
 - compra.
 
-### cart_add
+### selection_add
 
-Se registra al usar la acción de agregar desde el feed.
+Se registra al usar la acción de agregar desde el feed para añadir el platillo a “Mi pedido”. Los botones de cantidad dentro de “Mi pedido” solo administran la selección y no generan este evento.
 
 No equivale a:
 
@@ -57,8 +77,6 @@ No equivale a:
 - pago;
 - ingreso.
 
-Importante: no asumir que toda forma de agregar al carrito necesariamente genera hoy este evento. Verifica consumidores antes de construir una métrica de conversión.
-
 ### category_view
 
 Se registra cuando el usuario activa una categoría persistente desde el menú.
@@ -67,7 +85,7 @@ La pseudo-categoría `populares` no se trackea como categoría DB en el flujo ac
 
 ### whatsapp_clicked
 
-Se registra únicamente cuando el cliente activa `Pedir por WhatsApp` desde una selección no vacía y con destino configurado. El evento incluye `restaurant_id` y un UUID anónimo guardado en `sessionStorage` como `session_id`.
+Se registra únicamente cuando el cliente activa `Pedir por WhatsApp` desde una selección no vacía y con destino configurado. Incluye `restaurant_id` y el UUID anónimo compartido en `session_id`.
 
 No confirma que WhatsApp se haya abierto, que el mensaje se haya enviado, que el restaurante lo haya recibido, ni que haya ocurrido una venta. No se presenta como conversión o pedido completado.
 
@@ -164,7 +182,7 @@ Si se quiere un verdadero ranking de menor rendimiento:
 
 ## Integridad del tracking
 
-RLS actual permite inserción pública amplia en `dish_events`.
+RLS permite inserts anónimos solo para un restaurante publicado y para las formas permitidas de `menu_view`, `dish_view`, `selection_add`, `category_view` y `whatsapp_clicked`. Rechaza nuevos inserts `view`/`cart_add`; las filas históricas siguen intactas. También valida pertenencia de platillos y categorías al restaurante, platillos activos y categorías visibles. Los eventos no son antifraude; un cliente puede fabricar IDs de sesión y eventos válidos.
 
 `dish_events.session_id` es nullable para mantener compatibilidad con eventos históricos y eventos existentes que no se asocian a sesión.
 
@@ -197,22 +215,13 @@ Un evento idealmente debe cumplir:
 - `category_id` pertenece a `restaurant_id`;
 - si aplica, el dish pertenece a la category indicada.
 
-El esquema/policy actual no debe asumirse como garantía completa de esta coherencia.
+La política de insert valida esta coherencia para los eventos nuevos.
 
 Si una tarea toca integridad de analytics, reforzar en backend antes que confiar en frontend.
 
-## View tracking actual
+## Dish view tracking
 
-`DishFeed` mantiene un Set local para evitar duplicar el mismo dish dentro de la instancia.
-
-El efecto observado se dispara con `startIndex`.
-
-Riesgo conocido:
-
-- desplazarse verticalmente a otros platillos dentro del feed no necesariamente actualiza el índice usado por ese efecto;
-- por tanto, “views” no debe asumirse como conteo exhaustivo de todos los platillos vistos al hacer scroll.
-
-Antes de crear KPIs basados en views, validar este flujo.
+`DishFeed` registra el platillo que se abrió desde el menú. No cuenta tarjetas renderizadas ni cada platillo que aparece al hacer scroll como vista intencional.
 
 ## Category tracking actual
 
@@ -224,13 +233,7 @@ No asumir que abrir/cerrar repetidamente produce una semántica de sesión únic
 
 ## Cart tracking actual
 
-El `cart_add` observado está asociado a una acción en `DishFeed`.
-
-Antes de medir:
-
-`views → cart_add`
-
-verifica que todos los puntos de entrada al carrito estén instrumentados de forma consistente.
+`selection_add` está asociado a la acción explícita de agregar desde `DishFeed`. Los cambios de cantidad en “Mi pedido” no lo generan. El término describe selección, no pedido enviado.
 
 ## Reglas para métricas nuevas
 
@@ -294,10 +297,10 @@ No ejecutar automáticamente; son candidatos de roadmap técnico:
 
 1. corregir semántica de “Hoy”;
 2. instrumentar views reales por platillo visible;
-3. uniformar todos los puntos de `cart_add`;
+3. mapear datos históricos y eventos canónicos en Statistics sin reinterpretar filas;
 4. eliminar truncamiento silencioso o agregar agregación server-side;
 5. separar métricas por período de métricas current-state;
-6. reforzar integridad/abuso de eventos.
+6. añadir límites contra abuso de eventos.
 
 ## Validación para cambios de analytics
 
