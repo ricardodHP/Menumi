@@ -39,6 +39,8 @@ Reglas:
 - después de cambios de esquema, regenerar cuando el entorno lo permita;
 - si no puede regenerarse, documentar el pendiente.
 
+TASK004: los tipos se regeneraron desde el proyecto remoto enlazado mediante la descarga oficial del panel Supabase; incluyen `restaurants.whatsapp_enabled`, `dish_events.session_id` y `dish_event_type.whatsapp_clicked`.
+
 ## Entidades activas principales
 
 ### profiles
@@ -75,6 +77,7 @@ Campos de dominio incluyen:
 - address;
 - hours;
 - whatsapp_link;
+- whatsapp_enabled;
 - instagram_link;
 - cuisine_template;
 - status;
@@ -155,7 +158,8 @@ Eventos:
 
 - view;
 - cart_add;
-- category_view.
+- category_view;
+- whatsapp_clicked.
 
 Incluye:
 
@@ -163,6 +167,7 @@ Incluye:
 - dish_id;
 - category_id;
 - event_type;
+- session_id (nullable, UUID de sesión anónima del navegador cuando aplica);
 - created_at.
 
 Owner/admin leen según RLS.

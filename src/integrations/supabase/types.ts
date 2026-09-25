@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       categories: {
@@ -95,6 +120,7 @@ export type Database = {
           event_type: Database["public"]["Enums"]["dish_event_type"]
           id: string
           restaurant_id: string
+          session_id: string | null
         }
         Insert: {
           category_id?: string | null
@@ -103,6 +129,7 @@ export type Database = {
           event_type: Database["public"]["Enums"]["dish_event_type"]
           id?: string
           restaurant_id: string
+          session_id?: string | null
         }
         Update: {
           category_id?: string | null
@@ -111,6 +138,7 @@ export type Database = {
           event_type?: Database["public"]["Enums"]["dish_event_type"]
           id?: string
           restaurant_id?: string
+          session_id?: string | null
         }
         Relationships: []
       }
@@ -347,6 +375,7 @@ export type Database = {
           slug: string
           status: Database["public"]["Enums"]["restaurant_status"]
           updated_at: string
+          whatsapp_enabled: boolean
           whatsapp_link: string | null
         }
         Insert: {
@@ -366,6 +395,7 @@ export type Database = {
           slug: string
           status?: Database["public"]["Enums"]["restaurant_status"]
           updated_at?: string
+          whatsapp_enabled?: boolean
           whatsapp_link?: string | null
         }
         Update: {
@@ -385,6 +415,7 @@ export type Database = {
           slug?: string
           status?: Database["public"]["Enums"]["restaurant_status"]
           updated_at?: string
+          whatsapp_enabled?: boolean
           whatsapp_link?: string | null
         }
         Relationships: []
@@ -732,7 +763,11 @@ export type Database = {
         | "chinese"
         | "japanese"
         | "generic"
-      dish_event_type: "view" | "cart_add" | "category_view"
+      dish_event_type:
+        | "view"
+        | "cart_add"
+        | "category_view"
+        | "whatsapp_clicked"
       order_status:
         | "pending"
         | "preparing"
@@ -866,6 +901,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       app_role: ["admin", "owner", "customer"],
@@ -876,7 +914,12 @@ export const Constants = {
         "japanese",
         "generic",
       ],
-      dish_event_type: ["view", "cart_add", "category_view"],
+      dish_event_type: [
+        "view",
+        "cart_add",
+        "category_view",
+        "whatsapp_clicked",
+      ],
       order_status: ["pending", "preparing", "ready", "delivered", "cancelled"],
       restaurant_status: ["draft", "published"],
       table_session_status: ["open", "closed"],

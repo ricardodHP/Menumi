@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Heart, MessageCircle, QrCode } from "lucide-react";
+import { Heart, QrCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import QrCodeModal from "@/components/QrCodeModal";
 import type { RestaurantInfo } from "@/data/restaurant";
@@ -56,17 +56,6 @@ const ProfileHeader = ({ restaurant }: ProfileHeaderProps) => {
           >
             <Heart className="w-3.5 h-3.5 mr-1" />
             Seguir
-          </Button>
-        )}
-        {restaurant.whatsappLink && (
-          <Button
-            variant="secondary"
-            size="sm"
-            className="flex-1 h-8 text-xs font-semibold"
-            onClick={() => window.open(restaurant.whatsappLink, "_blank")}
-          >
-            <MessageCircle className="w-3.5 h-3.5 mr-1" />
-            Mensaje
           </Button>
         )}
         <Button

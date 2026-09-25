@@ -29,6 +29,7 @@ export interface RestaurantInfo {
   bio: string;
   posts: number;
   whatsappLink: string;
+  whatsappEnabled: boolean;
   instagramLink: string;
   address?: string;
   hours?: string;

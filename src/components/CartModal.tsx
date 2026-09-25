@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import SharedCartQrModal from "./SharedCartQrModal";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { formatCurrency } from "@/lib/currency";
+import { buildWhatsAppMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
+import { trackEvent } from "@/lib/analytics";
 
 interface CartModalProps {
   isPreview?: boolean;
@@ -21,7 +23,7 @@ const CartModal = ({ isPreview = false }: CartModalProps) => {
     selectionNote, setSelectionNote,
   } = useCart();
   const { slug } = useParams<{ slug: string }>();
-  const { restaurant } = useRestaurantData(slug);
+  const { restaurant, loading: restaurantLoading } = useRestaurantData(slug, { preview: isPreview });
   const [creating, setCreating] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
 
@@ -29,6 +31,21 @@ const CartModal = ({ isPreview = false }: CartModalProps) => {
     if (!shared || !restaurant) return "";
     return `${window.location.origin}/r/${restaurant.username}?group=${shared.code}`;
   }, [shared, restaurant]);
+
+  const whatsappUrl = useMemo(() => {
+    if (
+      restaurantLoading ||
+      !restaurant ||
+      restaurant.username !== slug ||
+      !restaurant.whatsappEnabled ||
+      items.length === 0 ||
+      shared
+    ) return null;
+    return buildWhatsAppUrl(
+      restaurant.whatsappLink,
+      buildWhatsAppMessage(items, selectionNote),
+    );
+  }, [items, restaurant, restaurantLoading, selectionNote, shared, slug]);
 
   useEffect(() => {
     if (isCartOpen) {
@@ -67,6 +84,14 @@ const CartModal = ({ isPreview = false }: CartModalProps) => {
   const handleShareLink = () => {
     if (!shared || !restaurant) return;
     setQrOpen(true);
+  };
+
+  const handleWhatsAppClick = () => {
+    if (!whatsappUrl || !restaurant) return;
+    if (!isPreview) {
+      trackEvent({ restaurantId: restaurant.id, eventType: "whatsapp_clicked" });
+    }
+    window.open(whatsappUrl, "_blank", "noopener,noreferrer");
   };
 
   return (
@@ -338,22 +363,18 @@ const CartModal = ({ isPreview = false }: CartModalProps) => {
               <span className="text-lg font-bold text-foreground">{formatCurrency(totalPrice)}</span>
             </div>
             <>
+              {whatsappUrl && (
               <div className="flex justify-end">
                   <Button
                     variant="outline"
                     className="h-11 px-4 text-sm font-semibold border-[#25D366] text-[#25D366] hover:bg-[#25D366]/10"
-                    onClick={() => {
-                      const lines = items.map(
-                        (i) => `• ${i.quantity}x ${i.dish.name} — $${i.dish.price * i.quantity}`
-                      );
-                      const msg = `🍽️ *Mi Pedido*\n\n${lines.join("\n")}\n\n*Total: $${totalPrice} MXN*`;
-                      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
-                    }}
+                    onClick={handleWhatsAppClick}
                   >
                     <MessageCircle className="w-4 h-4" />
-                    WhatsApp
+                    Pedir por WhatsApp
                   </Button>
               </div>
+              )}
               {!shared && !isPreview && (
                 <Button
                   variant="secondary"

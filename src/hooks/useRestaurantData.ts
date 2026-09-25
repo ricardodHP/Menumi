@@ -112,6 +112,7 @@ export function useRestaurantData(
         bio: r.bio ?? "",
         posts: dishes.length,
         whatsappLink: r.whatsapp_link ?? "",
+        whatsappEnabled: r.whatsapp_enabled,
         instagramLink: r.instagram_link ?? "",
         address: r.address ?? undefined,
         hours: r.hours ?? undefined,

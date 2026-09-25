@@ -22,6 +22,7 @@ import { Link } from "react-router-dom";
 import type { Database } from "@/integrations/supabase/types";
 import QrCodeModal from "@/components/QrCodeModal";
 import { getRestaurantPublicPath, getRestaurantPublicUrl } from "@/lib/restaurant-public";
+import { getWhatsAppPhoneInputValue } from "@/lib/whatsapp";
 
 type CuisineTemplate = Database["public"]["Enums"]["cuisine_template"];
 
@@ -42,6 +43,7 @@ export default function DashboardHome() {
     address: "",
     hours: "",
     whatsapp_link: "",
+    whatsapp_enabled: false,
     instagram_link: "",
     cuisine_template: "generic" as CuisineTemplate,
     show_by_rating: false,
@@ -60,7 +62,8 @@ export default function DashboardHome() {
       phone: restaurant.phone ?? "",
       address: restaurant.address ?? "",
       hours: restaurant.hours ?? "",
-      whatsapp_link: restaurant.whatsapp_link ?? "",
+      whatsapp_link: getWhatsAppPhoneInputValue(restaurant.whatsapp_link),
+      whatsapp_enabled: restaurant.whatsapp_enabled,
       instagram_link: restaurant.instagram_link ?? "",
       cuisine_template: restaurant.cuisine_template,
       show_by_rating: restaurant.show_by_rating,
@@ -80,7 +83,8 @@ export default function DashboardHome() {
         phone: form.phone || null,
         address: form.address || null,
         hours: form.hours || null,
-        whatsapp_link: form.whatsapp_link || null,
+        whatsapp_link: form.whatsapp_link.trim() || null,
+        whatsapp_enabled: form.whatsapp_enabled,
         instagram_link: form.instagram_link || null,
         cuisine_template: form.cuisine_template,
         show_by_rating: form.show_by_rating,
@@ -228,13 +232,25 @@ export default function DashboardHome() {
 
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="wa">WhatsApp (URL)</Label>
+              <Label htmlFor="wa">WhatsApp (teléfono)</Label>
               <Input
                 id="wa"
+                type="tel"
                 value={form.whatsapp_link}
                 onChange={(e) => setForm({ ...form, whatsapp_link: e.target.value })}
-                placeholder="https://wa.me/52..."
+                placeholder="+52 55 1234 5678"
               />
+              <div className="mt-2 flex items-center justify-between gap-3 rounded-md border p-3">
+                <div>
+                  <Label htmlFor="whatsapp-enabled" className="text-sm">Mostrar opción en Mi pedido</Label>
+                  <p className="text-xs text-muted-foreground">Tus clientes podrán continuar en WhatsApp.</p>
+                </div>
+                <Switch
+                  id="whatsapp-enabled"
+                  checked={form.whatsapp_enabled}
+                  onCheckedChange={(checked) => setForm({ ...form, whatsapp_enabled: checked })}
+                />
+              </div>
             </div>
             <div>
               <Label htmlFor="ig">Instagram (URL)</Label>

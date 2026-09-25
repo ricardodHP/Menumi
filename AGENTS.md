@@ -284,3 +284,145 @@ Culinary Feed es una plataforma multi-tenant de menús digitales para restaurant
 El MVP actual se concentra en el menú público y su administración. Mesas, meseros, sesiones y pedidos por mesa existen en el repositorio, pero están fuera del MVP activo y se consideran funcionalidades congeladas salvo instrucción explícita.
 
 Para reglas funcionales, arquitectura, Supabase, menú público, analytics o validación, consulta el documento especializado correspondiente.
+
+## Escalamiento de herramientas y acciones externas
+
+Prioriza siempre el camino más directo, reproducible y de menor costo operativo.
+
+Orden preferido cuando aplique:
+
+1. inspección del repositorio;
+2. comandos locales / CLI;
+3. tests o scripts existentes;
+4. documentación oficial si existe incertidumbre real;
+5. herramientas externas, navegador o interfaces gráficas únicamente cuando sean necesarias y estén autorizadas.
+
+### Regla de bloqueo
+
+Si el método esperado falla por alguno de estos motivos:
+
+- falta de autenticación;
+- credenciales ausentes;
+- permisos insuficientes;
+- token requerido;
+- proyecto remoto no enlazado;
+- Docker/servicio local no disponible;
+- CLI que requiere login interactivo;
+- acceso a consola web requerido;
+
+NO cambies automáticamente a:
+
+- navegador;
+- dashboard web;
+- consola administrativa;
+- login mediante interfaz gráfica;
+- herramienta externa alternativa;
+- MCP/conector alternativo;
+- instalación de software adicional;
+- otro mecanismo con acceso remoto.
+
+En su lugar:
+
+1. detente en ese subpaso;
+2. informa brevemente qué comando falló y por qué;
+3. indica si el bloqueo impide realmente continuar;
+4. proporciona los comandos exactos que el usuario puede ejecutar manualmente;
+5. si existe una alternativa mediante navegador o herramienta externa, solicita autorización explícita antes de utilizarla.
+
+Ejemplo:
+
+> `supabase db push --dry-run` no pudo ejecutarse porque falta autenticación.
+> No abriré el dashboard de Supabase automáticamente.
+> Puedes ejecutar:
+>
+> `supabase login`
+> `supabase link --project-ref <ref>`
+> `supabase migration list --linked`
+> `supabase db push --dry-run`
+>
+> Si quieres que intente la verificación mediante navegador, confírmalo explícitamente.
+
+### Navegador
+
+No abras automáticamente un navegador para resolver fallos de CLI o autenticación.
+
+Usa navegador solamente cuando:
+
+- el usuario lo solicite explícitamente;
+- el usuario apruebe su uso después de que expliques por qué es necesario;
+- la tarea sea explícitamente visual y no pueda validarse razonablemente con código, tests o CLI.
+
+Que una operación pueda realizarse mediante navegador no es razón suficiente para abrirlo.
+
+### Reintentos
+
+No repitas varias veces comandos que fallan por una causa determinista.
+
+Ejemplos:
+
+- missing token;
+- unauthorized;
+- permission denied;
+- authentication required;
+- Docker unavailable.
+
+Un segundo intento solo se justifica si cambió alguna condición que pueda resolver el fallo.
+
+### Acciones remotas
+
+No realices automáticamente acciones remotas que el usuario haya indicado que ejecutará manualmente.
+
+Si el usuario establece, por ejemplo:
+
+> "yo aplicaré las migraciones"
+
+entonces tu responsabilidad termina en:
+
+- preparar la migración;
+- inspeccionarla;
+- validarla localmente cuando sea posible;
+- proporcionar el dry-run/push esperado;
+- indicar claramente qué queda pendiente.
+
+No intentes aplicar la migración, iniciar sesión, abrir el dashboard ni buscar otro mecanismo para ejecutarla.
+
+### Supabase CLI y acceso remoto
+
+- Usa Supabase CLI como vía preferida para inspección de historial, dry-runs y migraciones.
+- Si Supabase CLI falla por autenticación, token, permisos o ausencia de Docker, detente y reporta el bloqueo.
+- No abras Supabase Dashboard automáticamente como fallback.
+- No ejecutes `supabase login` mediante navegador sin autorización explícita.
+- Si el usuario indicó que aplicará migraciones manualmente, no intentes aplicarlas ni validarlas mediante Dashboard; entrega los comandos exactos y marca la validación remota como pendiente.
+- Nunca sustituyas un fallo de CLI por una mutación manual en SQL Editor salvo solicitud explícita del usuario.
+
+## Preferencia del proyecto: operaciones remotas
+
+Para este proyecto, el responsable aplica manualmente las migraciones Supabase cuando así lo indique en la tarea o conversación.
+
+Cuando una migración requiera aplicación remota:
+
+- prepara el archivo;
+- valida su contenido;
+- ejecuta validaciones locales disponibles;
+- entrega los comandos CLI necesarios;
+- marca la aplicación remota como pendiente;
+- continúa únicamente con trabajo que no dependa de confirmar el estado remoto.
+
+No abras interfaces web para completar ese paso sin permiso explícito.
+
+## Disciplina de herramientas
+
+No uses una herramienta más costosa o amplia si una comprobación local y focalizada responde la misma pregunta.
+
+Evita:
+
+- navegación web exploratoria sin una pregunta concreta;
+- abrir dashboards para comprobar información disponible por CLI;
+- repetir inspecciones ya realizadas;
+- lanzar subagentes para cambios estrechamente acoplados o pequeños;
+- ampliar la investigación después de obtener evidencia suficiente para decidir.
+
+Antes de escalar de herramienta, pregunta:
+"¿Esta acción puede cambiar la implementación o desbloquear una validación necesaria?"
+
+Si no, no la ejecutes.

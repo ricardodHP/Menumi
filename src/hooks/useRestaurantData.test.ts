@@ -14,6 +14,7 @@ const supabaseMock = vi.hoisted(() => {
     address: null,
     hours: null,
     whatsapp_link: null,
+    whatsapp_enabled: true,
     instagram_link: null,
     cuisine_template: "generic",
     status: "draft",
@@ -109,6 +110,7 @@ describe("useRestaurantData publication boundary", () => {
       address: null,
       hours: null,
       whatsapp_link: null,
+      whatsapp_enabled: true,
       instagram_link: null,
       cuisine_template: "generic",
       status: "draft",
@@ -129,6 +131,7 @@ describe("useRestaurantData publication boundary", () => {
     });
     expect(result.current.categories.map((category) => category.id)).toEqual(["visible-category"]);
     expect(result.current.dishes.map((dish) => dish.id)).toEqual(["visible-dish"]);
+    expect(result.current.restaurant?.whatsappEnabled).toBe(true);
   });
 
   it("loads a draft preview when the database authorization boundary returns it", async () => {

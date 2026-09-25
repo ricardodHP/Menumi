@@ -10,6 +10,7 @@ const restaurant = {
   bio: "Sabores tradicionales",
   posts: 6,
   whatsappLink: "https://wa.me/523312345678",
+  whatsappEnabled: true,
   instagramLink: "https://instagram.com/dragon-dorado",
   address: "Calle Hidalgo 45",
   hours: "Mar-Dom 12:00-22:00",
@@ -25,5 +26,11 @@ describe("ProfileHeader public MVP profile", () => {
 
     expect(screen.queryByText("seguidores")).not.toBeInTheDocument();
     expect(screen.queryByText("siguiendo")).not.toBeInTheDocument();
+  });
+
+  it("does not offer WhatsApp outside a non-empty Mi pedido selection", () => {
+    render(<ProfileHeader restaurant={restaurant} />);
+
+    expect(screen.queryByRole("button", { name: /mensaje|whatsapp/i })).not.toBeInTheDocument();
   });
 });

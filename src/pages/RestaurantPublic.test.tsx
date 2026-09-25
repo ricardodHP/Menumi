@@ -27,6 +27,7 @@ const restaurant = {
   bio: "Sabores tradicionales",
   posts: 0,
   whatsappLink: "",
+  whatsappEnabled: false,
   instagramLink: "",
   logo: "/seed/restaurant-logo.png",
   cuisineTemplate: "generic",

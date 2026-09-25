@@ -16,7 +16,8 @@ Eventos actuales:
 
 - `view`;
 - `cart_add`;
-- `category_view`.
+- `category_view`;
+- `whatsapp_clicked`.
 
 El tracking se realiza desde frontend mediante:
 
@@ -26,7 +27,7 @@ La función `trackEvent` es best-effort y no debe bloquear la UX principal.
 
 ## Exclusión de preview
 
-El menú abierto con `/r/:slug?preview=1` es una vista de inspección para el owner/admin y no registra eventos públicos `view`, `cart_add` ni `category_view`. La interacción visual y el carrito pueden seguir funcionando, pero no deben inflar las métricas del menú publicado.
+El menú abierto con `/r/:slug?preview=1` es una vista de inspección para el owner/admin y no registra eventos públicos `view`, `cart_add`, `category_view` ni `whatsapp_clicked`. La interacción visual y el carrito pueden seguir funcionando, pero no deben inflar las métricas del menú publicado.
 
 El menú publicado sin `preview=1` conserva el tracking actual.
 
@@ -63,6 +64,12 @@ Importante: no asumir que toda forma de agregar al carrito necesariamente genera
 Se registra cuando el usuario activa una categoría persistente desde el menú.
 
 La pseudo-categoría `populares` no se trackea como categoría DB en el flujo actual.
+
+### whatsapp_clicked
+
+Se registra únicamente cuando el cliente activa `Pedir por WhatsApp` desde una selección no vacía y con destino configurado. El evento incluye `restaurant_id` y un UUID anónimo guardado en `sessionStorage` como `session_id`.
+
+No confirma que WhatsApp se haya abierto, que el mensaje se haya enviado, que el restaurante lo haya recibido, ni que haya ocurrido una venta. No se presenta como conversión o pedido completado.
 
 ## Dashboard actual
 
@@ -158,6 +165,8 @@ Si se quiere un verdadero ranking de menor rendimiento:
 ## Integridad del tracking
 
 RLS actual permite inserción pública amplia en `dish_events`.
+
+`dish_events.session_id` es nullable para mantener compatibilidad con eventos históricos y eventos existentes que no se asocian a sesión.
 
 Esto facilita tracking anónimo, pero permite manipulación.
 

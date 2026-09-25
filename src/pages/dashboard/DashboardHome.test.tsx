@@ -25,6 +25,7 @@ const restaurant = {
   address: "Calle Hidalgo 45",
   hours: "Mar-Dom 12:00-22:00",
   whatsapp_link: "https://wa.me/523312345678",
+  whatsapp_enabled: true,
   instagram_link: "https://instagram.com/dragondorado",
   cuisine_template: "generic",
   show_by_rating: false,
@@ -126,5 +127,25 @@ describe("DashboardHome responsive layout", () => {
       `${window.location.origin}/r/dragon-dorado`,
     );
     expect(screen.getByTestId("qr-url")).not.toHaveTextContent("preview");
+  });
+
+  it("loads a legacy wa.me URL as a phone number and saves the optional setting", async () => {
+    render(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <DashboardHome />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByLabelText("WhatsApp (teléfono)")).toHaveValue("+523312345678");
+    expect(screen.getByRole("switch", { name: /Mostrar opción en Mi pedido/i })).toBeChecked();
+
+    fireEvent.click(screen.getByRole("switch", { name: /Mostrar opción en Mi pedido/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+    await waitFor(() => expect(supabaseMock.updatePayloads).toHaveLength(1));
+    expect(supabaseMock.updatePayloads[0]).toMatchObject({
+      whatsapp_link: "+523312345678",
+      whatsapp_enabled: false,
+    });
   });
 });
