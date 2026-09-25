@@ -32,6 +32,9 @@ dist-ssr
 supabase/.temp/
 supabase/.branches/
 
+# Cloudflare Wrangler local state
+.wrangler/
+
 # Local security assessment artifacts
 strix_runs/
 SECURITY_CHECKLIST_*.md
