@@ -161,15 +161,17 @@ export default function DashboardCategories() {
 
   return (
     <DashboardLayout>
-      <div className="flex items-center justify-between mb-6">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-2xl font-bold">Categorías</h2>
           <p className="text-sm text-muted-foreground">
             Agrupa tus platillos en secciones (ej. Entradas, Postres)
           </p>
         </div>
-        <Button onClick={openNew}>
-          <Plus className="h-4 w-4" /> Nueva
+        <Button onClick={openNew} aria-label="Nueva categoría" className="shrink-0">
+          <Plus className="h-4 w-4" aria-hidden="true" />
+          <span className="lg:hidden">Nueva</span>
+          <span className="hidden lg:inline">Nueva categoría</span>
         </Button>
       </div>
 
@@ -178,7 +180,7 @@ export default function DashboardCategories() {
       ) : items.length === 0 ? (
         <Card>
           <CardContent className="py-10 text-center text-muted-foreground">
-            Aún no tienes categorías. Crea la primera con "Nueva".
+            Aún no tienes categorías. Crea la primera con "Nueva categoría".
           </CardContent>
         </Card>
       ) : (

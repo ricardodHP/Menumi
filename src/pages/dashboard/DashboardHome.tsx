@@ -17,7 +17,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useManagedRestaurant } from "@/hooks/useManagedRestaurant";
 import { toast } from "sonner";
-import { ExternalLink, Upload, Eye, QrCode } from "lucide-react";
+import { ChevronDown, ExternalLink, Upload, Eye, QrCode } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { Database } from "@/integrations/supabase/types";
 import QrCodeModal from "@/components/QrCodeModal";
@@ -26,6 +26,7 @@ import { getWhatsAppPhoneInputValue } from "@/lib/whatsapp";
 import BusinessHoursEditor from "@/components/BusinessHoursEditor";
 import { loadRestaurantBusinessHours, saveRestaurantBusinessHours } from "@/lib/business-hours-api";
 import {
+  formatBusinessHoursSummary,
   validateWeeklyBusinessHours,
   type WeeklyBusinessDay,
 } from "@/lib/business-hours";
@@ -74,6 +75,7 @@ export default function DashboardHome() {
   const [savedHoursJson, setSavedHoursJson] = useState("");
   const [hoursConfigured, setHoursConfigured] = useState(false);
   const [savedHoursConfigured, setSavedHoursConfigured] = useState(false);
+  const [hoursExpanded, setHoursExpanded] = useState(false);
   const [hoursLoaded, setHoursLoaded] = useState(false);
   const [hoursLoadError, setHoursLoadError] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -107,6 +109,7 @@ export default function DashboardHome() {
     let cancelled = false;
     setHoursLoaded(false);
     setHoursLoadError(false);
+    setHoursExpanded(false);
     loadRestaurantBusinessHours(restaurantId).then((schedule) => {
       if (cancelled) return;
       const loadedWeek = schedule ?? cloneWeek(CLOSED_WEEK);
@@ -129,6 +132,15 @@ export default function DashboardHome() {
     hoursConfigured !== savedHoursConfigured ||
     (hoursConfigured && JSON.stringify(businessHours) !== savedHoursJson)
   );
+  const hoursSummary = !hoursLoaded
+    ? "Cargando horario…"
+    : hoursLoadError
+      ? "No se pudo comprobar el horario semanal"
+      : hoursConfigured
+        ? formatBusinessHoursSummary(businessHours).text
+        : form.hours
+          ? `Horario legado: ${form.hours}`
+          : "Sin horario semanal configurado";
   const isDirty = formDirty || hoursDirty;
 
   const handleSave = async () => {
@@ -239,7 +251,7 @@ export default function DashboardHome() {
 
   return (
     <DashboardLayout>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
+      <div className="grid grid-cols-1 gap-3 mb-5 sm:grid-cols-2 lg:hidden">
         <Button asChild variant="outline" className="rounded-full h-11">
           <Link to={`${publicPath}?preview=1`} target="_blank">
             <Eye className="h-4 w-4" /> Vista previa
@@ -314,33 +326,63 @@ export default function DashboardHome() {
           </div>
 
           <section className="space-y-3 border-t pt-5">
-            {hoursConfigured ? (
-              <BusinessHoursEditor value={businessHours} onChange={setBusinessHours} />
-            ) : (
-              <div className="rounded-lg border p-4">
+            <div className="flex items-center gap-2 rounded-lg border p-3 sm:gap-3 sm:p-4">
+              <div className="min-w-0 flex-1">
                 <h3 className="font-semibold">Horarios</h3>
-                {hoursLoadError ? (
-                  <p role="status" className="mt-1 text-sm text-destructive">
-                    No se pudo comprobar si ya tienes horarios semanales. No los sobrescribiremos; vuelve a cargar la pantalla para intentar de nuevo.
-                  </p>
-                ) : (
-                  <>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {form.hours ? `Horario actual (texto legado): ${form.hours}` : "Aún no hay un horario semanal configurado."}
-                    </p>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="mt-3"
-                      disabled={!hoursLoaded || saving}
-                      onClick={() => setHoursConfigured(true)}
-                    >
-                      Configurar horario semanal
-                    </Button>
-                  </>
-                )}
+                <p
+                  className="truncate text-sm text-muted-foreground"
+                  title={hoursSummary}
+                  role={hoursLoadError ? "status" : undefined}
+                >
+                  {hoursSummary}
+                </p>
               </div>
-            )}
+              {!hoursConfigured && !hoursLoadError && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0"
+                  aria-label="Configurar horario semanal"
+                  disabled={!hoursLoaded || saving}
+                  onClick={() => {
+                    setHoursConfigured(true);
+                    setHoursExpanded(true);
+                  }}
+                >
+                  <span className="sm:hidden">Configurar</span>
+                  <span className="hidden sm:inline">Configurar horario semanal</span>
+                </Button>
+              )}
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="shrink-0"
+                aria-label={hoursExpanded ? "Contraer horarios" : "Expandir horarios"}
+                aria-expanded={hoursExpanded}
+                aria-controls="restaurant-business-hours-editor"
+                onClick={() => setHoursExpanded((expanded) => !expanded)}
+              >
+                <ChevronDown
+                  className={`h-4 w-4 transition-transform ${hoursExpanded ? "rotate-180" : ""}`}
+                  aria-hidden="true"
+                />
+              </Button>
+            </div>
+            <div id="restaurant-business-hours-editor" hidden={!hoursExpanded} className="space-y-3">
+              {hoursConfigured ? (
+                <BusinessHoursEditor value={businessHours} onChange={setBusinessHours} />
+              ) : hoursLoadError ? (
+                <p className="rounded-lg border p-4 text-sm text-destructive">
+                  No sobrescribiremos ningún horario. Vuelve a cargar la pantalla para intentarlo de nuevo.
+                </p>
+              ) : (
+                <p className="rounded-lg border p-4 text-sm text-muted-foreground">
+                  {form.hours ? `Horario actual (texto legado): ${form.hours}` : "Aún no hay un horario semanal configurado."}
+                </p>
+              )}
+            </div>
           </section>
 
           <h3 className="border-t pt-5 font-semibold">Contacto y redes</h3>

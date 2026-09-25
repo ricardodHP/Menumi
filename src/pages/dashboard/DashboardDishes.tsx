@@ -290,8 +290,10 @@ export default function DashboardDishes() {
               ))}
             </SelectContent>
           </Select>
-          <Button onClick={openNew}>
-            <Plus className="h-4 w-4" /> Nuevo
+          <Button onClick={openNew} aria-label="Nuevo platillo" className="shrink-0">
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            <span className="lg:hidden">Nuevo</span>
+            <span className="hidden lg:inline">Nuevo platillo</span>
           </Button>
         </div>
       </div>
@@ -301,7 +303,7 @@ export default function DashboardDishes() {
       ) : filtered.length === 0 ? (
         <Card>
           <CardContent className="py-10 text-center text-muted-foreground">
-            No hay platillos. Crea el primero con "Nuevo".
+            No hay platillos. Crea el primero con "Nuevo platillo".
           </CardContent>
         </Card>
       ) : (

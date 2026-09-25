@@ -74,4 +74,14 @@ describe("DashboardCategories visibility", () => {
       expect(updateCategory).toHaveBeenCalledWith({ is_visible: false });
     });
   });
+
+  it("labels the create action with the category resource", () => {
+    render(
+      <MemoryRouter initialEntries={["/dashboard/categorias"]}>
+        <DashboardCategories />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("button", { name: "Nueva categoría" })).toBeInTheDocument();
+  });
 });

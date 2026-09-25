@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import DashboardHome from "./DashboardHome";
@@ -104,10 +104,11 @@ describe("DashboardHome responsive layout", () => {
       </MemoryRouter>,
     );
 
-    const preview = screen.getByRole("link", { name: /Vista previa/i });
+    const preview = within(screen.getByRole("main")).getByRole("link", { name: "Vista previa" });
     const actions = preview.parentElement;
 
     expect(actions).toHaveClass("grid-cols-1", "sm:grid-cols-2");
+    expect(actions).toHaveClass("lg:hidden");
   });
 
   it("keeps the dashboard content constrained and padded responsively", () => {
@@ -120,7 +121,8 @@ describe("DashboardHome responsive layout", () => {
     const main = screen.getByRole("main");
 
     expect(main).toHaveClass("w-full", "min-w-0", "px-4", "sm:px-6", "lg:px-8");
-    expect(main).toHaveClass("max-w-6xl");
+    expect(main.parentElement).toHaveClass("min-w-0", "lg:pl-64");
+    expect(main).not.toHaveClass("max-w-6xl");
   });
 
   it("uses preview for drafts, keeps the public URL stable, and does not overwrite status on save", async () => {
@@ -130,7 +132,7 @@ describe("DashboardHome responsive layout", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole("link", { name: /Vista previa/i })).toHaveAttribute(
+    expect(within(screen.getByRole("main")).getByRole("link", { name: "Vista previa" })).toHaveAttribute(
       "href",
       "/r/dragon-dorado?preview=1",
     );
@@ -150,7 +152,7 @@ describe("DashboardHome responsive layout", () => {
       </MemoryRouter>,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /Compartir QR/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Compartir QR" }));
 
     expect(screen.getByTestId("qr-url")).toHaveTextContent(
       `${window.location.origin}/r/dragon-dorado`,
