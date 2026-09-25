@@ -88,10 +88,12 @@ Incluye:
 Incluye:
 
 - perfil;
-- categorías estilo stories;
+- tres presentaciones del mismo menú: Social, Carta clásica y Galería;
+- categorías estilo stories en Social e índice/secciones en las otras presentaciones;
 - populares;
-- grid;
-- feed;
+- grid/feed en Social;
+- filas compactas en Carta clásica;
+- tarjetas visuales en Galería;
 - búsqueda;
 - detalle visual;
 - carrito;
@@ -101,6 +103,8 @@ Incluye:
 - compartir platillo;
 - Asistente del Chef;
 - QR del menú.
+
+Social es el diseño predeterminado para menús existentes y nuevos. La presentación se guarda aparte de `cuisine_template`, que continúa como tema visual independiente. Los cinco temas actuales son provisionales; definir sus estilos y catálogo definitivos queda pendiente.
 
 ### Estadísticas
 

@@ -8,6 +8,8 @@ import ProfileHeader from "@/components/ProfileHeader";
 import CategoryStories from "@/components/CategoryStories";
 import DishGrid from "@/components/DishGrid";
 import DishFeed from "@/components/DishFeed";
+import ClassicMenu from "@/components/menu-layouts/ClassicMenu";
+import GalleryMenu from "@/components/menu-layouts/GalleryMenu";
 import CartFloatingButton from "@/components/CartFloatingButton";
 import CartModal from "@/components/CartModal";
 import AssistantFloatingButton from "@/components/AssistantFloatingButton";
@@ -25,9 +27,12 @@ interface RestaurantViewProps {
 }
 
 const RestaurantView = ({ restaurant, categories, dishes, isPreview = false }: RestaurantViewProps) => {
-  const [activeCategory, setActiveCategory] = useState<string | null>("populares");
+  const [activeCategory, setActiveCategory] = useState<string | null>(() => (
+    restaurant.menuLayout === "social" ? "populares" : null
+  ));
   const [feedOpen, setFeedOpen] = useState(false);
   const [feedStartIndex, setFeedStartIndex] = useState(0);
+  const [selectedDish, setSelectedDish] = useState<Dish | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "ranked">("grid");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -39,25 +44,14 @@ const RestaurantView = ({ restaurant, categories, dishes, isPreview = false }: R
   const [searchParams, setSearchParams] = useSearchParams();
   const { setRestaurantScope, joinSharedCart, shared } = useCart();
 
+  useEffect(() => {
+    setActiveCategory(restaurant.menuLayout === "social" ? "populares" : null);
+  }, [restaurant.menuLayout]);
+
   // Register a resolver so the shared cart can map dish_id → Dish.
   useLayoutEffect(() => {
     setRestaurantScope(restaurant.id, dishes, { persist: !isPreview });
   }, [dishes, isPreview, restaurant.id, setRestaurantScope]);
-
-  // Handle ?dish=<id> deep link: open the feed centered on that dish.
-  useEffect(() => {
-    const dishId = searchParams.get("dish");
-    if (!dishId || dishes.length === 0) return;
-    const idx = dishes.findIndex((d) => d.id === dishId);
-    if (idx >= 0) {
-      setFeedStartIndex(idx);
-      setFeedOpen(true);
-    }
-    const next = new URLSearchParams(searchParams);
-    next.delete("dish");
-    setSearchParams(next, { replace: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dishes]);
 
   // Handle ?group=<code> deep link: join the shared cart.
   useEffect(() => {
@@ -113,14 +107,49 @@ const RestaurantView = ({ restaurant, categories, dishes, isPreview = false }: R
     return result;
   }, [activeCategory, searchQuery, dishes, restaurant.showByRating]);
 
+  // Handle ?dish=<id> deep link only when the dish belongs to this menu.
+  useEffect(() => {
+    const dishId = searchParams.get("dish");
+    if (!dishId || dishes.length === 0) return;
+
+    const dish = dishes.find((item) => item.id === dishId);
+    if (dish) {
+      if (restaurant.menuLayout === "social") {
+        const index = filteredDishes.findIndex((item) => item.id === dishId);
+        if (index >= 0) {
+          setSelectedDish(null);
+          setFeedStartIndex(index);
+          setFeedOpen(true);
+        }
+      } else {
+        setSelectedDish(dish);
+        setFeedStartIndex(0);
+        setFeedOpen(true);
+      }
+    }
+
+    const next = new URLSearchParams(searchParams);
+    next.delete("dish");
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dishes, restaurant.menuLayout]);
+
   const handleDishClick = (index: number) => {
+    setSelectedDish(null);
     setFeedStartIndex(index);
     setFeedOpen(true);
   };
 
+  const handleLayoutDishOpen = (dish: Dish) => {
+    setSelectedDish(dish);
+    setFeedStartIndex(0);
+    setFeedOpen(true);
+  };
+
   const handleCategoryClick = (categoryId: string) => {
-    setActiveCategory(activeCategory === categoryId ? null : categoryId);
-    if (!isPreview && categoryId !== "populares" && activeCategory !== categoryId) {
+    setActiveCategory(restaurant.menuLayout === "social" && activeCategory === categoryId ? null : categoryId);
+    const isPersistentCategory = categories.some((category) => category.id === categoryId);
+    if (!isPreview && isPersistentCategory && activeCategory !== categoryId) {
       trackEvent({
         restaurantId: restaurant.id,
         eventType: "category_view",
@@ -146,7 +175,7 @@ const RestaurantView = ({ restaurant, categories, dishes, isPreview = false }: R
   }, []);
 
   return (
-    <div className="mx-auto min-h-screen max-w-6xl bg-background" style={rootStyle}>
+    <div className="mx-auto min-h-screen max-w-6xl bg-background" style={rootStyle} data-menu-layout={restaurant.menuLayout}>
       {/* Top bar */}
       <div className="sticky top-0 z-20 bg-background border-b border-border px-4 py-2.5 flex items-center justify-between">
         <h2 className="text-base font-bold text-foreground">
@@ -207,62 +236,89 @@ const RestaurantView = ({ restaurant, categories, dishes, isPreview = false }: R
         </div>
       )}
 
-      <ProfileHeader restaurant={restaurant} />
-
-      <CategoryStories
-        categories={categories}
-        activeCategory={activeCategory}
-        onCategoryClick={handleCategoryClick}
+      <ProfileHeader
+        restaurant={restaurant}
+        variant={restaurant.menuLayout === "classic" ? "classic" : "social"}
       />
 
-      {/* Tab bar */}
-      <div className="flex border-b border-border">
-        <button
-          onClick={() => setViewMode("grid")}
-          className={`flex-1 py-2.5 flex justify-center border-b-2 transition-colors ${
-            viewMode === "grid"
-              ? "border-foreground text-foreground"
-              : "border-transparent text-muted-foreground"
-          }`}
-        >
-          <Grid3X3 className="w-5 h-5" />
-        </button>
-        <button
-          onClick={() => setViewMode("ranked")}
-          className={`flex-1 py-2.5 flex justify-center border-b-2 transition-colors ${
-            viewMode === "ranked"
-              ? "border-foreground text-foreground"
-              : "border-transparent text-muted-foreground"
-          }`}
-        >
-          <Star className="w-5 h-5" />
-        </button>
-      </div>
+      {restaurant.menuLayout === "social" ? (
+        <>
+          <CategoryStories
+            categories={categories}
+            activeCategory={activeCategory}
+            onCategoryClick={handleCategoryClick}
+          />
 
-      {/* Content */}
-      {viewMode === "grid" ? (
-        <DishGrid
-          dishes={filteredDishes}
-          onDishClick={handleDishClick}
-          resetKey={`${activeCategory ?? "none"}|${searchQuery}|${viewMode}`}
+          {/* Tab bar */}
+          <div className="flex border-b border-border">
+            <button
+              onClick={() => setViewMode("grid")}
+              className={`flex-1 py-2.5 flex justify-center border-b-2 transition-colors ${
+                viewMode === "grid"
+                  ? "border-foreground text-foreground"
+                  : "border-transparent text-muted-foreground"
+              }`}
+            >
+              <Grid3X3 className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => setViewMode("ranked")}
+              className={`flex-1 py-2.5 flex justify-center border-b-2 transition-colors ${
+                viewMode === "ranked"
+                  ? "border-foreground text-foreground"
+                  : "border-transparent text-muted-foreground"
+              }`}
+            >
+              <Star className="w-5 h-5" />
+            </button>
+          </div>
+
+          {viewMode === "grid" ? (
+            <DishGrid
+              dishes={filteredDishes}
+              onDishClick={handleDishClick}
+              resetKey={`${activeCategory ?? "none"}|${searchQuery}|${viewMode}`}
+            />
+          ) : (
+            <DishGrid
+              dishes={[...filteredDishes].sort((a, b) => b.rating - a.rating)}
+              onDishClick={handleDishClick}
+              resetKey={`${activeCategory ?? "none"}|${searchQuery}|${viewMode}`}
+            />
+          )}
+        </>
+      ) : restaurant.menuLayout === "classic" ? (
+        <ClassicMenu
+          categories={categories}
+          dishes={dishes}
+          searchQuery={searchQuery}
+          activeCategory={activeCategory}
+          showByRating={restaurant.showByRating}
+          onCategoryActivate={handleCategoryClick}
+          onDishOpen={handleLayoutDishOpen}
         />
       ) : (
-        <DishGrid
-          dishes={[...filteredDishes].sort((a, b) => b.rating - a.rating)}
-          onDishClick={handleDishClick}
-          resetKey={`${activeCategory ?? "none"}|${searchQuery}|${viewMode}`}
+        <GalleryMenu
+          categories={categories}
+          dishes={dishes}
+          searchQuery={searchQuery}
+          activeCategory={activeCategory}
+          showByRating={restaurant.showByRating}
+          onCategoryActivate={handleCategoryClick}
+          onDishOpen={handleLayoutDishOpen}
         />
       )}
 
       {feedOpen && (
         <DishFeed
-          dishes={filteredDishes}
+          dishes={restaurant.menuLayout === "social" ? filteredDishes : selectedDish ? [selectedDish] : []}
           startIndex={feedStartIndex}
           restaurant={restaurant}
-          headerTitle={activeCategoryName ?? restaurant.username}
+          headerTitle={restaurant.menuLayout === "social" ? activeCategoryName ?? restaurant.username : selectedDish?.name ?? restaurant.username}
           onClose={() => setFeedOpen(false)}
           onReviewSubmitted={handleReviewSubmitted}
           isPreview={isPreview}
+          presentation={restaurant.menuLayout}
         />
       )}
       <AssistantFloatingButton onClick={() => setAssistantOpen(true)} used={assistantOpen} />

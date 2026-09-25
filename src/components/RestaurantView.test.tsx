@@ -6,6 +6,12 @@ import RestaurantView from "./RestaurantView";
 
 const trackEventMock = vi.hoisted(() => vi.fn());
 const reviewsModalMock = vi.hoisted(() => ({ onRender: vi.fn() }));
+const presentationMocks = vi.hoisted(() => ({
+  classic: vi.fn(),
+  gallery: vi.fn(),
+  feed: vi.fn(),
+  stories: vi.fn(),
+}));
 
 vi.mock("@/lib/analytics", () => ({
   trackEvent: trackEventMock,
@@ -28,12 +34,45 @@ vi.mock("@/contexts/CartContext", () => ({
 
 vi.mock("@/components/ProfileHeader", () => ({ default: () => null }));
 vi.mock("@/components/CategoryStories", () => ({
-  default: ({ onCategoryClick }: { onCategoryClick: (id: string) => void }) => (
-    <button onClick={() => onCategoryClick("category-1")}>Entradas</button>
-  ),
+  default: (props: { activeCategory: string | null; onCategoryClick: (id: string) => void }) => {
+    presentationMocks.stories(props);
+    return (
+      <>
+        <button onClick={() => props.onCategoryClick("category-1")}>Entradas</button>
+        <button onClick={() => props.onCategoryClick("populares")}>Populares</button>
+      </>
+    );
+  },
 }));
 vi.mock("@/components/DishGrid", () => ({ default: () => null }));
-vi.mock("@/components/DishFeed", () => ({ default: () => null }));
+vi.mock("@/components/DishFeed", () => ({
+  default: (props: { dishes: Dish[]; startIndex: number; presentation?: string }) => {
+    presentationMocks.feed(props);
+    return null;
+  },
+}));
+vi.mock("@/components/menu-layouts/ClassicMenu", () => ({
+  default: (props: { activeCategory: string | null; onCategoryActivate: (id: string) => void }) => {
+    presentationMocks.classic(props);
+    return (
+      <>
+        <button onClick={() => props.onCategoryActivate("category-1")}>Classic Entradas</button>
+        <button onClick={() => props.onCategoryActivate("populares")}>Classic Populares</button>
+      </>
+    );
+  },
+}));
+vi.mock("@/components/menu-layouts/GalleryMenu", () => ({
+  default: (props: { activeCategory: string | null; onCategoryActivate: (id: string) => void }) => {
+    presentationMocks.gallery(props);
+    return (
+      <>
+        <button onClick={() => props.onCategoryActivate("category-1")}>Gallery Entradas</button>
+        <button onClick={() => props.onCategoryActivate("populares")}>Gallery Populares</button>
+      </>
+    );
+  },
+}));
 vi.mock("@/components/CartFloatingButton", () => ({ default: () => null }));
 vi.mock("@/components/CartModal", () => ({ default: () => null }));
 vi.mock("@/components/AssistantFloatingButton", () => ({ default: () => null }));
@@ -55,6 +94,8 @@ const restaurant = {
   whatsappEnabled: false,
   instagramUsername: "",
   logo: "/logo.jpg",
+  menuLayout: "social",
+  ownerId: "owner-1",
   cuisineTemplate: "generic",
   showByRating: false,
   showRating: false,
@@ -78,13 +119,16 @@ const dish = {
   showRating: true,
 } satisfies Dish;
 
-function renderView(isPreview = false) {
+function renderView(
+  isPreview = false,
+  options: { menuLayout?: RestaurantInfo["menuLayout"]; dishes?: Dish[]; route?: string } = {},
+) {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[options.route ?? "/r/dragon-dorado"]}>
       <RestaurantView
-        restaurant={restaurant}
+        restaurant={{ ...restaurant, menuLayout: options.menuLayout ?? restaurant.menuLayout }}
         categories={categories}
-        dishes={dishes}
+        dishes={options.dishes ?? dishes}
         isPreview={isPreview}
       />
     </MemoryRouter>,
@@ -94,6 +138,18 @@ function renderView(isPreview = false) {
 describe("RestaurantView analytics boundary", () => {
   beforeEach(() => {
     trackEventMock.mockReset();
+    presentationMocks.classic.mockReset();
+    presentationMocks.gallery.mockReset();
+    presentationMocks.feed.mockReset();
+    presentationMocks.stories.mockReset();
+  });
+
+  it("keeps Social on its existing category experience and starts at Populares", () => {
+    renderView();
+
+    expect(presentationMocks.stories).toHaveBeenCalledWith(expect.objectContaining({ activeCategory: "populares" }));
+    expect(presentationMocks.classic).not.toHaveBeenCalled();
+    expect(presentationMocks.gallery).not.toHaveBeenCalled();
   });
 
   it("does not track category views in preview", () => {
@@ -117,10 +173,52 @@ describe("RestaurantView analytics boundary", () => {
     });
   });
 
+  it("routes Classic and Gallery with all categories initially selected and tracks only activated categories", () => {
+    const { rerender } = renderView(false, { menuLayout: "classic" });
+
+    expect(presentationMocks.classic).toHaveBeenCalledWith(expect.objectContaining({ activeCategory: null }));
+    expect(presentationMocks.stories).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Classic Populares" }));
+    expect(trackEventMock).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Classic Entradas" }));
+    expect(trackEventMock).toHaveBeenCalledWith(expect.objectContaining({ eventType: "category_view", categoryId: "category-1" }));
+
+    rerender(
+      <MemoryRouter>
+        <RestaurantView restaurant={{ ...restaurant, menuLayout: "gallery" }} categories={categories} dishes={dishes} />
+      </MemoryRouter>,
+    );
+    expect(presentationMocks.gallery).toHaveBeenCalledWith(expect.objectContaining({ activeCategory: null }));
+  });
+
   it("does not count dish cards as intentional dish views", () => {
     renderView();
 
     expect(trackEventMock).not.toHaveBeenCalled();
+  });
+
+  it("opens a valid deep link in the selected presentation with only that dish", () => {
+    renderView(false, {
+      menuLayout: "classic",
+      dishes: [dish],
+      route: "/r/dragon-dorado?dish=dish-1",
+    });
+
+    expect(presentationMocks.feed).toHaveBeenCalledWith(expect.objectContaining({
+      dishes: [dish],
+      startIndex: 0,
+      presentation: "classic",
+    }));
+  });
+
+  it("does not open an invalid deep link", () => {
+    renderView(false, {
+      menuLayout: "gallery",
+      dishes: [dish],
+      route: "/r/dragon-dorado?dish=belongs-to-another-menu",
+    });
+
+    expect(presentationMocks.feed).not.toHaveBeenCalled();
   });
 
   it("does not expose restaurant review submission in preview", () => {

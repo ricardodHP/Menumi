@@ -31,6 +31,12 @@ import {
   type WeeklyBusinessDay,
 } from "@/lib/business-hours";
 import { normalizeInstagramUsername } from "@/lib/instagram";
+import {
+  buildMenuPreviewPath,
+  MENU_LAYOUTS,
+  normalizeMenuLayout,
+  type MenuLayout,
+} from "@/lib/menu-layout";
 
 type CuisineTemplate = Database["public"]["Enums"]["cuisine_template"];
 
@@ -53,6 +59,50 @@ const cloneWeek = (week: readonly WeeklyBusinessDay[]) => week.map((day) => ({
   intervals: day.intervals.map((interval) => ({ ...interval })),
 }));
 
+function MenuLayoutMiniature({ layout }: { layout: MenuLayout }) {
+  if (layout === "social") {
+    return (
+      <div aria-hidden="true" className="space-y-2 rounded-md bg-muted/70 p-2">
+        <div className="flex justify-center gap-1.5">
+          {[0, 1, 2, 3].map((item) => (
+            <span key={item} className="h-4 w-4 rounded-full border-2 border-primary/70 bg-background" />
+          ))}
+        </div>
+        <div className="grid grid-cols-2 gap-1">
+          <span className="h-5 rounded bg-primary/15" />
+          <span className="h-5 rounded bg-primary/25" />
+        </div>
+      </div>
+    );
+  }
+
+  if (layout === "classic") {
+    return (
+      <div aria-hidden="true" className="space-y-1.5 rounded-md bg-muted/70 p-2">
+        <span className="block h-1.5 w-1/3 rounded bg-foreground/30" />
+        {[0, 1].map((item) => (
+          <div key={item} className="flex items-center gap-2 border-b border-border/70 pb-1">
+            <span className="h-5 w-5 shrink-0 rounded bg-foreground/10" />
+            <span className="flex-1 space-y-1">
+              <span className="block h-1.5 w-3/4 rounded bg-foreground/25" />
+              <span className="block h-1 w-1/2 rounded bg-foreground/10" />
+            </span>
+            <span className="h-1.5 w-6 rounded bg-primary/60" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div aria-hidden="true" className="grid grid-cols-2 gap-1 rounded-md bg-muted/70 p-2">
+      {[0, 1, 2, 3].map((item) => (
+        <span key={item} className={`h-7 rounded ${item % 2 ? "bg-primary/25" : "bg-primary/15"}`} />
+      ))}
+    </div>
+  );
+}
+
 export default function DashboardHome() {
   const { restaurant, loading } = useManagedRestaurant();
   const [form, setForm] = useState({
@@ -64,6 +114,7 @@ export default function DashboardHome() {
     whatsapp_link: "",
     whatsapp_enabled: false,
     instagram_link: "",
+    menu_layout: "social" as MenuLayout,
     cuisine_template: "generic" as CuisineTemplate,
     show_by_rating: false,
     show_rating: true,
@@ -94,6 +145,7 @@ export default function DashboardHome() {
       whatsapp_link: getWhatsAppPhoneInputValue(restaurant.whatsapp_link),
       whatsapp_enabled: restaurant.whatsapp_enabled,
       instagram_link: restaurant.instagram_link ?? "",
+      menu_layout: normalizeMenuLayout(restaurant.menu_layout),
       cuisine_template: restaurant.cuisine_template,
       show_by_rating: restaurant.show_by_rating,
       show_rating: restaurant.show_rating,
@@ -173,6 +225,7 @@ export default function DashboardHome() {
         whatsapp_link: form.whatsapp_link.trim() || null,
         whatsapp_enabled: form.whatsapp_enabled,
         instagram_link: instagramUsername,
+        menu_layout: form.menu_layout,
         cuisine_template: form.cuisine_template,
         show_by_rating: form.show_by_rating,
         show_rating: form.show_rating,
@@ -247,13 +300,14 @@ export default function DashboardHome() {
   }
 
   const publicPath = getRestaurantPublicPath(restaurant.slug);
+  const previewHref = buildMenuPreviewPath(publicPath, form.menu_layout, form.cuisine_template);
   const publicUrl = getRestaurantPublicUrl(restaurant.slug, window.location.origin);
 
   return (
-    <DashboardLayout>
+    <DashboardLayout previewHref={previewHref}>
       <div className="grid grid-cols-1 gap-3 mb-5 sm:grid-cols-2 lg:hidden">
         <Button asChild variant="outline" className="rounded-full h-11">
-          <Link to={`${publicPath}?preview=1`} target="_blank">
+          <Link to={previewHref} target="_blank">
             <Eye className="h-4 w-4" /> Vista previa
           </Link>
         </Button>
@@ -420,14 +474,44 @@ export default function DashboardHome() {
           </div>
 
           <h3 className="border-t pt-5 font-semibold">Preferencias del menú</h3>
+          <fieldset className="space-y-2">
+            <legend className="text-sm font-medium leading-none">Diseño del menú</legend>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {MENU_LAYOUTS.map((layout) => {
+                const selected = form.menu_layout === layout.value;
+                return (
+                  <button
+                    key={layout.value}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => setForm((current) => ({ ...current, menu_layout: layout.value }))}
+                    className={`rounded-lg border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                      selected
+                        ? "border-primary bg-primary/5 shadow-sm"
+                        : "border-border hover:border-primary/50 hover:bg-muted/40"
+                    }`}
+                  >
+                    <MenuLayoutMiniature layout={layout.value} />
+                    <span className="mt-3 block text-sm font-semibold">{layout.label}</span>
+                    <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">
+                      {layout.description}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Cambia cómo se organiza el mismo menú para tus clientes.
+            </p>
+          </fieldset>
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
-              <Label>Plantilla del menú</Label>
+              <Label>Tema visual</Label>
               <Select
                 value={form.cuisine_template}
                 onValueChange={(v) => setForm({ ...form, cuisine_template: v as CuisineTemplate })}
               >
-                <SelectTrigger>
+                <SelectTrigger aria-label="Tema visual">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

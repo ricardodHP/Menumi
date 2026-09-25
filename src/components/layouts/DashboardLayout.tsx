@@ -80,7 +80,12 @@ function DashboardNavigation({ pathname, ariaLabel, onNavigate }: DashboardNavig
   );
 }
 
-export default function DashboardLayout({ children }: { children: ReactNode }) {
+interface DashboardLayoutProps {
+  children: ReactNode;
+  previewHref?: string;
+}
+
+export default function DashboardLayout({ children, previewHref }: DashboardLayoutProps) {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -191,7 +196,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 <>
                   <Button asChild variant="outline" size="sm" className="hidden lg:inline-flex">
                     <Link
-                      to={`${publicPath}?preview=1`}
+                      to={previewHref ?? `${publicPath}?preview=1`}
                       target="_blank"
                       aria-label="Vista previa del menú"
                     >

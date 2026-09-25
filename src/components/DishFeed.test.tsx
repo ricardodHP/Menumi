@@ -46,6 +46,8 @@ const restaurant = {
   whatsappEnabled: false,
   instagramUsername: "",
   logo: "/logo.jpg",
+  menuLayout: "social",
+  ownerId: null,
   cuisineTemplate: "generic",
   showByRating: false,
   showRating: true,
@@ -128,6 +130,83 @@ describe("DishFeed analytics boundary", () => {
       categoryId: "category-1",
       isPreview: false,
     });
+  });
+
+  it("keeps the shared detail actions in Carta clásica without inventing a photo", () => {
+    render(
+      <DishFeed
+        dishes={[dish]}
+        startIndex={0}
+        restaurant={restaurant}
+        onClose={vi.fn()}
+        presentation="classic"
+      />,
+    );
+
+    expect(document.querySelector('[data-menu-presentation="classic"]')).toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: "Guacamole" })).not.toBeInTheDocument();
+    expect(screen.getByText("$100.00 MXN")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Me gusta" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Ver comentarios" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Agregar" }));
+    expect(addItemMock).toHaveBeenCalledWith(dish);
+    expect(trackEventMock).toHaveBeenCalledWith(expect.objectContaining({ eventType: "selection_add" }));
+  });
+
+  it.each(["classic", "gallery"] as const)("tracks an intentionally opened %s detail once", (presentation) => {
+    render(
+      <DishFeed
+        dishes={[dish]}
+        startIndex={0}
+        restaurant={restaurant}
+        onClose={vi.fn()}
+        presentation={presentation}
+      />,
+    );
+
+    expect(trackEventMock).toHaveBeenCalledTimes(1);
+    expect(trackEventMock).toHaveBeenCalledWith({
+      restaurantId: "restaurant-1",
+      eventType: "dish_view",
+      dishId: "dish-1",
+      categoryId: "category-1",
+      isPreview: false,
+    });
+  });
+
+  it("uses a neutral gallery placeholder without a real photo and shows real photos when present", () => {
+    const { unmount } = render(
+      <DishFeed
+        dishes={[dish]}
+        startIndex={0}
+        restaurant={restaurant}
+        onClose={vi.fn()}
+        presentation="gallery"
+      />,
+    );
+
+    expect(screen.getAllByText("Guacamole")).toHaveLength(2);
+    expect(screen.queryByRole("img", { name: "Guacamole" })).not.toBeInTheDocument();
+    unmount();
+
+    render(
+      <DishFeed
+        dishes={[{ ...dish, hasRealImage: true }]}
+        startIndex={0}
+        restaurant={restaurant}
+        onClose={vi.fn()}
+        presentation="gallery"
+      />,
+    );
+    expect(screen.getByRole("img", { name: "Guacamole" })).toHaveAttribute("src", "/dish.jpg");
+  });
+
+  it("preserves the existing Social fallback image by default", () => {
+    render(<DishFeed dishes={[dish]} startIndex={0} restaurant={restaurant} onClose={vi.fn()} />);
+
+    expect(document.querySelector('[data-menu-presentation="social"]')).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Guacamole" })).toHaveAttribute("src", "/dish.jpg");
   });
 
   it("keeps an unavailable dish visible but blocks adding it to Mi pedido", () => {

@@ -40,6 +40,8 @@ const restaurant: RestaurantInfo = {
   whatsappEnabled: false,
   instagramUsername: "",
   logo: "/logo.jpg",
+  menuLayout: "social",
+  ownerId: null,
   cuisineTemplate: "generic",
   showByRating: false,
   showRating: false,

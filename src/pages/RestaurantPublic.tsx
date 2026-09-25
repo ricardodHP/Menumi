@@ -7,11 +7,14 @@ import { useTableSession } from "@/hooks/useTableSession";
 import { Users, X, Receipt } from "lucide-react";
 import TableOrdersDrawer from "@/components/TableOrdersDrawer";
 import { trackMenuViewOnce } from "@/lib/analytics";
+import { useAuth } from "@/contexts/AuthContext";
+import { isCuisineTemplate, MENU_LAYOUTS, normalizeMenuLayout } from "@/lib/menu-layout";
 
 export default function RestaurantPublic() {
   const { slug } = useParams<{ slug: string }>();
   const [searchParams] = useSearchParams();
   const preview = searchParams.get("preview") === "1";
+  const { user, isAdmin, isOwner } = useAuth();
   const { loading, notFound, restaurant, categories, dishes } = useRestaurantData(slug, { preview });
   const { session, leave } = useTableSession();
   const [ordersOpen, setOrdersOpen] = useState(false);
@@ -45,6 +48,21 @@ export default function RestaurantPublic() {
   }
 
   const showBanner = session && session.restaurant_slug === slug;
+  const canApplyPreviewOverrides = preview && (
+    isAdmin || (isOwner && user?.id === restaurant.ownerId)
+  );
+  const requestedLayout = searchParams.get("menu_layout");
+  const requestedTheme = searchParams.get("cuisine_template");
+  const hasSupportedLayout = MENU_LAYOUTS.some((layout) => layout.value === requestedLayout);
+  const previewRestaurant = canApplyPreviewOverrides
+    ? {
+        ...restaurant,
+        menuLayout: hasSupportedLayout ? normalizeMenuLayout(requestedLayout) : restaurant.menuLayout,
+        cuisineTemplate: isCuisineTemplate(requestedTheme)
+          ? requestedTheme
+          : restaurant.cuisineTemplate,
+      }
+    : restaurant;
 
   return (
     <>
@@ -82,7 +100,7 @@ export default function RestaurantPublic() {
         </div>
       )}
       <RestaurantView
-        restaurant={restaurant}
+        restaurant={previewRestaurant}
         categories={categories}
         dishes={dishes}
         isPreview={preview}

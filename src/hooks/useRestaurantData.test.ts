@@ -11,6 +11,7 @@ const supabaseMock = vi.hoisted(() => {
     slug: "dragon-dorado",
     bio: "Sabores tradicionales",
     logo_url: null,
+    owner_id: "owner-1",
     phone: null,
     address: null,
     hours: null,
@@ -18,15 +19,36 @@ const supabaseMock = vi.hoisted(() => {
     whatsapp_enabled: true,
     instagram_link: null,
     cuisine_template: "generic",
+    menu_layout: "social",
     status: "draft",
     show_by_rating: false,
     show_rating: true,
   };
-  const categoryRows = [
+  const categoryRows: Array<{
+    id: string;
+    name: string;
+    emoji: string | null;
+    image_url: string | null;
+    position: number;
+    is_visible: boolean;
+  }> = [
     { id: "visible-category", name: "Entradas", emoji: "🥑", image_url: null, position: 0, is_visible: true },
     { id: "hidden-category", name: "Secretos", emoji: "🤫", image_url: null, position: 1, is_visible: false },
   ];
-  const dishRows = [
+  const dishRows: Array<{
+    id: string;
+    name: string;
+    description: string | null;
+    price: number;
+    image_url: string | null;
+    rating: number;
+    likes_count: number;
+    tags: string[];
+    category_id: string;
+    position: number;
+    is_active: boolean;
+    show_rating: boolean;
+  }> = [
     {
       id: "visible-dish",
       name: "Guacamole",
@@ -106,6 +128,10 @@ const supabaseMock = vi.hoisted(() => {
     eqCalls,
     orderCalls,
     setRestaurantResult: (value: typeof restaurant | null) => { restaurantResult = value; },
+    setImageUrls: (categoryUrl: string | null, dishUrl: string | null) => {
+      categoryRows[0].image_url = categoryUrl;
+      dishRows[0].image_url = dishUrl;
+    },
   };
 });
 
@@ -117,12 +143,14 @@ describe("useRestaurantData publication boundary", () => {
   beforeEach(() => {
     supabaseMock.eqCalls.length = 0;
     supabaseMock.orderCalls.length = 0;
+    supabaseMock.setImageUrls(null, null);
     supabaseMock.setRestaurantResult({
       id: "restaurant-1",
       name: "Dragón Dorado",
       slug: "dragon-dorado",
       bio: "Sabores tradicionales",
       logo_url: null,
+      owner_id: "owner-1",
       phone: null,
       address: null,
       hours: null,
@@ -130,6 +158,7 @@ describe("useRestaurantData publication boundary", () => {
       whatsapp_enabled: true,
       instagram_link: null,
       cuisine_template: "generic",
+      menu_layout: "social",
       status: "draft",
       show_by_rating: false,
       show_rating: true,
@@ -148,7 +177,9 @@ describe("useRestaurantData publication boundary", () => {
     });
     expect(result.current.categories.map((category) => category.id)).toEqual(["visible-category"]);
     expect(result.current.categories[0].image).toBe("/seed/dishes/tacos-pastor.jpg");
+    expect(result.current.categories[0].hasRealImage).toBe(false);
     expect(result.current.dishes.map((dish) => dish.id)).toEqual(["visible-dish"]);
+    expect(result.current.dishes[0].hasRealImage).toBe(false);
     expect(result.current.restaurant?.whatsappEnabled).toBe(true);
   });
 
@@ -177,6 +208,78 @@ describe("useRestaurantData publication boundary", () => {
       value: "published",
     });
     expect(result.current.restaurant?.name).toBe("Dragón Dorado");
+  });
+
+  it("maps the saved menu layout, owner and real photos to the public model", async () => {
+    supabaseMock.setRestaurantResult({
+      id: "restaurant-1",
+      name: "Dragón Dorado",
+      slug: "dragon-dorado",
+      bio: "Sabores tradicionales",
+      logo_url: null,
+      owner_id: "owner-1",
+      phone: null,
+      address: null,
+      hours: null,
+      whatsapp_link: null,
+      whatsapp_enabled: true,
+      instagram_link: null,
+      cuisine_template: "generic",
+      menu_layout: "classic",
+      status: "draft",
+      show_by_rating: false,
+      show_rating: true,
+    });
+    supabaseMock.setImageUrls("/images/entradas.jpg", "/images/guacamole.jpg");
+
+    const { result } = renderHook(() => useRestaurantData("dragon-dorado", { preview: true }));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.restaurant).toMatchObject({ menuLayout: "classic", ownerId: "owner-1" });
+    expect(result.current.categories[0]).toMatchObject({
+      image: "/images/entradas.jpg",
+      hasRealImage: true,
+    });
+    expect(result.current.dishes[0]).toMatchObject({
+      image: "/images/guacamole.jpg",
+      hasRealImage: true,
+    });
+  });
+
+  it("falls back to Social and seed images for an unsupported layout", async () => {
+    supabaseMock.setRestaurantResult({
+      id: "restaurant-1",
+      name: "Dragón Dorado",
+      slug: "dragon-dorado",
+      bio: "Sabores tradicionales",
+      logo_url: null,
+      owner_id: "owner-1",
+      phone: null,
+      address: null,
+      hours: null,
+      whatsapp_link: null,
+      whatsapp_enabled: true,
+      instagram_link: null,
+      cuisine_template: "generic",
+      menu_layout: "unsupported",
+      status: "draft",
+      show_by_rating: false,
+      show_rating: true,
+    });
+    supabaseMock.setImageUrls(null, null);
+
+    const { result } = renderHook(() => useRestaurantData("dragon-dorado", { preview: true }));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.restaurant?.menuLayout).toBe("social");
+    expect(result.current.categories[0]).toMatchObject({
+      image: "/seed/dishes/tacos-pastor.jpg",
+      hasRealImage: false,
+    });
+    expect(result.current.dishes[0]).toMatchObject({
+      image: "/seed/dishes/tacos-pastor.jpg",
+      hasRealImage: false,
+    });
   });
 
   it("denies the regular public route when an unpublished restaurant is omitted", async () => {

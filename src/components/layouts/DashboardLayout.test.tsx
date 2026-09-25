@@ -158,4 +158,19 @@ describe("DashboardLayout MVP navigation", () => {
       `${window.location.origin}/r/taqueria-los-hermanos`,
     );
   });
+
+  it("uses a supplied preview URL while preserving the standalone fallback", () => {
+    render(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <DashboardLayout previewHref="/r/taqueria-los-hermanos?preview=1&menu_layout=gallery&cuisine_template=chinese">
+          Contenido
+        </DashboardLayout>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("link", { name: "Vista previa del menú" })).toHaveAttribute(
+      "href",
+      "/r/taqueria-los-hermanos?preview=1&menu_layout=gallery&cuisine_template=chinese",
+    );
+  });
 });

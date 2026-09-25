@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Heart, Star, Plus, Check, X, MessageCircle, Share2 } from "lucide-react";
-import type { Dish, RestaurantInfo } from "@/data/restaurant";
+import type { Dish, MenuLayout, RestaurantInfo } from "@/data/restaurant";
 import { useCart } from "@/contexts/CartContext";
 import { useLikes } from "@/contexts/LikesContext";
 import { trackEvent } from "@/lib/analytics";
 import ReviewsModal from "@/components/ReviewsModal";
 import { toast } from "sonner";
+import { formatCurrency } from "@/lib/currency";
 
 interface DishFeedProps {
   dishes: Dish[];
@@ -16,6 +17,7 @@ interface DishFeedProps {
   onClose: () => void;
   onReviewSubmitted?: () => void;
   isPreview?: boolean;
+  presentation?: MenuLayout;
 }
 
 const DishFeed = ({
@@ -26,6 +28,7 @@ const DishFeed = ({
   onClose,
   onReviewSubmitted,
   isPreview = false,
+  presentation = "social",
 }: DishFeedProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const { addItem, items } = useCart();
@@ -103,7 +106,7 @@ const DishFeed = ({
   }, [startIndex, dishes, restaurant.id, isPreview]);
 
   return (
-    <div className="fixed inset-0 z-50 bg-background">
+    <div className="fixed inset-0 z-50 bg-background" data-menu-presentation={presentation}>
       {/* Header */}
       <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 bg-background border-b border-border">
         <div className="flex items-center gap-2 min-w-0">
@@ -119,28 +122,39 @@ const DishFeed = ({
 
       {/* Scrollable feed */}
       <div ref={scrollRef} className="h-[calc(100vh-57px)] overflow-y-auto lg:px-6 lg:py-6">
-        <div className="lg:mx-auto lg:grid lg:max-w-7xl lg:grid-cols-3 lg:gap-6">
+        <div className={`lg:mx-auto ${presentation === "social" ? "lg:grid lg:max-w-7xl lg:grid-cols-3 lg:gap-6" : "lg:max-w-3xl"}`}>
         {dishes.map((dish) => (
-          <div key={dish.id} className="border-b border-border animate-fade-in lg:overflow-hidden lg:rounded-xl lg:border">
+          <div
+            key={dish.id}
+            className={`border-b border-border animate-fade-in ${presentation === "social" ? "lg:overflow-hidden lg:rounded-xl lg:border" : "mx-auto w-full max-w-3xl"}`}
+          >
             {/* Dish image */}
-            <div
-              className="aspect-square w-full relative select-none"
-              onClick={() => handleImageTap(dish)}
-            >
-              <img
-                src={dish.image}
-                alt={dish.name}
-                loading="lazy"
-                width={512}
-                height={512}
-                className="w-full h-full object-cover"
-              />
-              {heartAnimation === dish.id && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <Heart className="w-20 h-20 text-white fill-white drop-shadow-lg animate-heart-pop" />
-                </div>
-              )}
-            </div>
+            {presentation !== "classic" || dish.hasRealImage === true ? (
+              <div
+                className={`relative w-full select-none ${presentation === "classic" ? "mx-auto aspect-[4/3] max-h-[55vh] max-w-2xl" : "aspect-square"}`}
+                onClick={presentation === "social" || dish.hasRealImage === true ? () => handleImageTap(dish) : undefined}
+              >
+                {presentation !== "social" && dish.hasRealImage !== true ? (
+                  <div className="flex h-full w-full items-center justify-center bg-secondary/50 px-8 text-center font-serif text-2xl font-semibold text-secondary-foreground">
+                    {dish.name}
+                  </div>
+                ) : (
+                  <img
+                    src={dish.image}
+                    alt={dish.name}
+                    loading="lazy"
+                    width={512}
+                    height={512}
+                    className="h-full w-full object-cover"
+                  />
+                )}
+                {heartAnimation === dish.id && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <Heart className="w-20 h-20 text-white fill-white drop-shadow-lg animate-heart-pop" />
+                  </div>
+                )}
+              </div>
+            ) : null}
 
             {/* Action bar */}
             <div className="flex items-center justify-between px-4 py-2">
@@ -251,7 +265,7 @@ const DishFeed = ({
             {/* Price + tags */}
             <div className="px-4 pb-3 flex items-center gap-2 flex-wrap">
               <span className="text-base font-bold text-primary">
-                ${dish.price} MXN
+                {presentation === "social" ? `$${dish.price} MXN` : formatCurrency(dish.price)}
               </span>
               {dish.tags.map((tag) => (
                 <span

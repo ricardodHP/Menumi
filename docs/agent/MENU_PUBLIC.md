@@ -4,24 +4,19 @@
 
 Este documento describe la experiencia pública en `/r/:slug` y los invariantes que deben preservarse al modificarla.
 
-## Principio visual
+## Diseños del menú
 
-El menú público sigue un patrón deliberadamente visual inspirado en interacciones familiares de redes sociales:
+El restaurante elige una de tres presentaciones para el mismo catálogo:
 
-- perfil superior;
-- categorías horizontales tipo stories;
-- grid de platillos;
-- feed vertical de detalle en móvil y cuadrícula de tarjetas en escritorio;
-- imágenes protagonistas;
-- acciones rápidas;
-- navegación mobile-first.
+- **Social** conserva el perfil, las categorías tipo stories, el grid y el detalle estilo feed. Es el diseño predeterminado y mantiene el comportamiento previo.
+- **Carta clásica** prioriza lectura rápida con índice de categorías, filas compactas, descripción breve y precio visible. Las miniaturas aparecen únicamente cuando el platillo tiene una foto real.
+- **Galería** presenta las categorías como secciones con tarjetas de platillos y fotos protagonistas. Nombre y precio están visibles; sin foto real, la tarjeta usa un tratamiento tipográfico neutro.
 
-No convertir esta experiencia en:
+Las tres presentaciones comparten perfil, búsqueda, catálogo visible, carrito, likes, reviews, rating, compartir, disponibilidad, QR, WhatsApp y asistente. La elección de presentación es independiente del tema visual `cuisine_template`; los cinco temas actuales son provisionales y sus estilos definitivos quedan pendientes de decisión.
 
-- tabla administrativa;
-- catálogo B2B denso;
-- dashboard;
-- lista de texto dominante.
+La presentación cambia navegación y jerarquía visual, no categorías ni platillos. `populares` continúa como vista virtual ordenada por la configuración del restaurante. En Carta clásica y Galería, activar una categoría desplaza a su sección y mantiene accesible el resto del menú; Populares sí filtra el catálogo. La búsqueda abarca todo el catálogo visible aunque haya una categoría seleccionada.
+
+Los detalles abiertos desde Carta clásica o Galería conservan las acciones comunes y muestran una foto solo si existe una imagen real. Social conserva su comportamiento de imagen actual.
 
 ## Flujo principal
 
@@ -38,7 +33,7 @@ No convertir esta experiencia en:
 - carrito;
 - asistente;
 - reviews;
-- templates;
+- temas visuales y presentación;
 - deep links;
 - tracking.
 
@@ -62,7 +57,7 @@ No inventar URLs o contactos.
 
 ## Categorías
 
-`CategoryStories` presenta categorías horizontalmente.
+En Social, `CategoryStories` presenta categorías horizontalmente.
 
 Incluye una pseudo-categoría:
 
@@ -77,7 +72,7 @@ La interacción de categoría puede generar `category_view`.
 
 ## Grid
 
-`DishGrid` permite exploración rápida.
+En Social, `DishGrid` permite exploración rápida.
 
 Prioridades:
 
@@ -90,7 +85,7 @@ No sobrecargar cada tarjeta con todos los metadatos del platillo.
 
 ## Feed
 
-`DishFeed` conserva una vista detallada vertical en móvil. En pantallas grandes organiza los platillos en una cuadrícula de tres columnas con tarjetas cuadradas estilo Instagram.
+`DishFeed` conserva la vista detallada y las acciones comunes. En Social muestra el feed vertical en móvil y, en pantallas grandes, una cuadrícula de tres columnas con tarjetas cuadradas estilo Instagram. Para Carta clásica y Galería se abre un solo platillo con un marco visual adaptado a la presentación.
 
 Comportamientos actuales relevantes:
 
@@ -121,7 +116,7 @@ El menú soporta query param de platillo:
 
 `/r/:slug?dish=<id>`
 
-El objetivo es abrir el feed centrado en ese platillo cuando exista.
+El objetivo es abrir el detalle de ese platillo cuando pertenezca al menú cargado.
 
 Reglas:
 

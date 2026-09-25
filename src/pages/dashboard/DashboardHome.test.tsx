@@ -44,6 +44,7 @@ const restaurant = {
   whatsapp_link: "https://wa.me/523312345678",
   whatsapp_enabled: true,
   instagram_link: "https://instagram.com/dragondorado",
+  // Legacy restaurant fixture: no persisted menu_layout yet.
   cuisine_template: "generic",
   show_by_rating: false,
   show_rating: true,
@@ -111,6 +112,34 @@ describe("DashboardHome responsive layout", () => {
     expect(actions).toHaveClass("lg:hidden");
   });
 
+  it("offers three accessible layout choices and defaults a legacy menu to Social", () => {
+    render(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <DashboardHome />
+      </MemoryRouter>,
+    );
+
+    const layouts = screen.getByRole("group", { name: "Diseño del menú" });
+    expect(within(layouts).getByRole("button", { name: /Social/i })).toHaveAttribute("aria-pressed", "true");
+    expect(within(layouts).getByRole("button", { name: /Carta clásica/i })).toHaveAttribute("aria-pressed", "false");
+    expect(within(layouts).getByRole("button", { name: /Galería/i })).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("marks Carta clásica dirty and persists the selected layout", async () => {
+    render(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <DashboardHome />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Carta clásica/i }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Guardar cambios" })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+    await waitFor(() => expect(supabaseMock.updatePayloads).toHaveLength(1));
+    expect(supabaseMock.updatePayloads[0]).toMatchObject({ menu_layout: "classic" });
+  });
+
   it("keeps the dashboard content constrained and padded responsively", () => {
     render(
       <MemoryRouter initialEntries={["/dashboard"]}>
@@ -134,7 +163,7 @@ describe("DashboardHome responsive layout", () => {
 
     expect(within(screen.getByRole("main")).getByRole("link", { name: "Vista previa" })).toHaveAttribute(
       "href",
-      "/r/dragon-dorado?preview=1",
+      "/r/dragon-dorado?preview=1&menu_layout=social&cuisine_template=generic",
     );
     expect(screen.getByText(`${window.location.origin}/r/dragon-dorado`)).toBeInTheDocument();
 
@@ -143,6 +172,31 @@ describe("DashboardHome responsive layout", () => {
     fireEvent.click(screen.getByRole("button", { name: "Guardar cambios" }));
     await waitFor(() => expect(supabaseMock.updatePayloads).toHaveLength(1));
     expect(supabaseMock.updatePayloads[0]).not.toHaveProperty("status");
+  });
+
+  it("shares the current unsaved layout and theme in mobile and header preview links", async () => {
+    render(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <DashboardHome />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Carta clásica/i }));
+    fireEvent.click(screen.getByRole("combobox", { name: "Tema visual" }));
+    fireEvent.click(await screen.findByRole("option", { name: "Japonesa" }));
+
+    const mobilePreview = within(screen.getByRole("main")).getByRole("link", { name: "Vista previa" });
+    const headerPreview = screen.getByRole("link", { name: "Vista previa del menú" });
+    const href = mobilePreview.getAttribute("href");
+    expect(headerPreview).toHaveAttribute("href", href);
+
+    const url = new URL(href ?? "", window.location.origin);
+    expect(url.pathname).toBe("/r/dragon-dorado");
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      preview: "1",
+      menu_layout: "classic",
+      cuisine_template: "japanese",
+    });
   });
 
   it("passes the public URL without preview to the QR modal", () => {

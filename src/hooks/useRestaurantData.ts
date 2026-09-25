@@ -4,6 +4,7 @@ import type { Category, Dish, RestaurantInfo } from "@/data/restaurant";
 import { filterPublicMenuRecords } from "@/lib/restaurant-public";
 import { loadRestaurantBusinessHours } from "@/lib/business-hours-api";
 import { normalizeInstagramUsername } from "@/lib/instagram";
+import { normalizeMenuLayout } from "@/lib/menu-layout";
 
 const FALLBACK_DISH = "/seed/dishes/tacos-pastor.jpg";
 const FALLBACK_LOGO = "/seed/restaurant-logo.png";
@@ -96,7 +97,8 @@ export function useRestaurantData(
         id: c.id,
         name: c.name,
         emoji: c.emoji ?? "🍽️",
-        image: c.image_url ?? FALLBACK_DISH,
+        image: c.image_url?.trim() ? c.image_url : FALLBACK_DISH,
+        hasRealImage: Boolean(c.image_url?.trim()),
       }));
 
       const dishes: Dish[] = publicContent.dishes.map((d) => ({
@@ -104,7 +106,8 @@ export function useRestaurantData(
         name: d.name,
         description: d.description ?? "",
         price: Number(d.price),
-        image: d.image_url ?? FALLBACK_DISH,
+        image: d.image_url?.trim() ? d.image_url : FALLBACK_DISH,
+        hasRealImage: Boolean(d.image_url?.trim()),
         category: d.category_id ?? "",
         rating: Number(d.rating),
         likes: d.likes_count,
@@ -123,6 +126,8 @@ export function useRestaurantData(
         whatsappLink: r.whatsapp_link ?? "",
         whatsappEnabled: r.whatsapp_enabled,
         instagramUsername: normalizeInstagramUsername(r.instagram_link) ?? "",
+        menuLayout: normalizeMenuLayout(r.menu_layout),
+        ownerId: r.owner_id,
         address: r.address ?? undefined,
         hours: r.hours ?? undefined,
         businessHours: hoursResult.schedule,

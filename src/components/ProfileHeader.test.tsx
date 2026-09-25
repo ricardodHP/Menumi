@@ -29,6 +29,15 @@ describe("ProfileHeader public MVP profile", () => {
     expect(screen.queryByText("siguiendo")).not.toBeInTheDocument();
   });
 
+  it("supports a compact profile for Carta clásica while keeping restaurant actions", () => {
+    render(<ProfileHeader restaurant={restaurant} variant="classic" />);
+
+    expect(document.querySelector('[data-profile-variant="classic"]')).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Dragón Dorado" })).toHaveClass("w-12", "h-12", "md:w-16", "md:h-16");
+    expect(screen.getByRole("button", { name: "Compartir QR del menú" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Seguir @dragondorado/i })).toBeInTheDocument();
+  });
+
   it("does not offer WhatsApp outside a non-empty Mi pedido selection", () => {
     render(<ProfileHeader restaurant={restaurant} />);
 
