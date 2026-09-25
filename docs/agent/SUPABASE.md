@@ -41,7 +41,7 @@ Reglas:
 
 TASK004: los tipos se regeneraron desde el proyecto remoto enlazado mediante la descarga oficial del panel Supabase; incluyen `restaurants.whatsapp_enabled`, `dish_events.session_id` y `dish_event_type.whatsapp_clicked`.
 
-TASK005: la migración local añade `menu_view`, `dish_view` y `selection_add`. La aplicación remota y la regeneración de tipos quedan pendientes; no se editó manualmente el archivo generado.
+TASK005: `20260924235900_task005_reliable_analytics.sql` figura aplicada local y remotamente según `supabase migration list --linked` (2026-09-24 23:59 UTC). `src/integrations/supabase/types.ts` se sincronizó con el esquema remoto después de esa migración e incluye `menu_view`, `dish_view`, `selection_add`, `whatsapp_clicked` y `dish_events.session_id`. El historial local no contiene migraciones posteriores a esa sincronización; la regeneración de tipos no está pendiente.
 
 ## Entidades activas principales
 

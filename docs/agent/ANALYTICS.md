@@ -20,7 +20,7 @@ Eventos canónicos de captura:
 - `category_view`;
 - `whatsapp_clicked`.
 
-`view` y `cart_add` permanecen en el enum y en filas históricas. No se reescriben ni se interpretan como si se hubieran capturado con los nombres nuevos. Statistics aún consume sus métricas históricas.
+`view` y `cart_add` permanecen en el enum y en filas históricas. Statistics los agrega junto con `dish_view` y `selection_add`, respectivamente: el código anterior emitía `view` al abrir intencionalmente un platillo y `cart_add` al usar la acción explícita para agregarlo. Cambiar cantidades dentro del carrito no emitía `cart_add`. No se reescriben filas históricas.
 
 El tracking se realiza desde frontend mediante:
 
@@ -101,84 +101,38 @@ Rangos disponibles:
 - Últimos 7 días;
 - Últimos 30 días.
 
-### Implementación temporal actual
+Los tres rangos usan límites de calendario en la zona horaria local del navegador del owner/admin. “Hoy” empieza a medianoche local; 7 y 30 días incluyen hoy y comienzan a medianoche local seis o 29 días antes. El límite superior es el momento de la consulta. Se convierten a ISO antes de consultar `created_at` (timestamptz), por lo que el cambio horario estacional conserva los límites del calendario local.
 
-El filtro usa:
+Todas las métricas y rankings de actividad usan estos mismos límites.
 
-- 1 día;
-- 7 días;
-- 30 días;
+## Lectura de eventos
 
-restados desde `Date.now()`.
-
-Consecuencia:
-
-**“Hoy” significa actualmente últimas 24 horas, no día calendario local.**
-
-No cambiar esa semántica silenciosamente.
-
-Si se corrige:
-
-- definir zona horaria;
-- definir inicio de día;
-- revisar labels;
-- añadir tests.
-
-## Límite de eventos
-
-La consulta actual limita a:
-
-`5000` eventos por rango.
-
-Consecuencia:
-
-- restaurantes con más volumen pueden ver rankings truncados;
-- el dashboard no indica actualmente que hubo truncamiento.
-
-No presentar la métrica como exhaustiva sin considerar este límite.
+El dashboard consulta `dish_events` directamente con el filtro `restaurant_id` y el límite temporal, y pagina en bloques de 1,000 filas hasta completar el rango. Así elimina el límite anterior de 5,000 filas. La agregación permanece en el cliente para la escala piloto; si el volumen crece, conviene mover los agregados a SQL/RPC conservando RLS y aislamiento por tenant. El índice existente `(restaurant_id, created_at DESC)` cubre el filtro principal.
 
 ## Métricas por período vs métricas all-time
 
-El dashboard combina fuentes con distintas ventanas.
+Las métricas del dashboard se agregan de eventos dentro del rango seleccionado. Likes y ratings no tienen una fuente histórica fechada disponible en esta vista y se omitieron en lugar de presentarlos como actividad del período.
 
-### Sí dependen del rango seleccionado
+### Métricas del rango seleccionado
 
 Derivadas de `dish_events`:
 
-- vistas de platillos;
-- agregados al carrito;
-- vistas de categorías;
-- rankings asociados a esos eventos.
+- visitas al menú;
+- vistas intencionales de platillos;
+- agregados intencionales a “Mi pedido”;
+- tasa de agregado por sesiones;
+- clicks intencionales en WhatsApp, cuando está habilitado;
+- vistas de categorías y rankings asociados a esos eventos.
 
-### No dependen actualmente del rango
+`Visitas al menú` cuenta `COUNT(DISTINCT session_id)` para `menu_view`. `Tasa de agregado` es sesiones distintas con `selection_add` / sesiones distintas con `menu_view`; con denominador cero muestra 0%. Los eventos con `session_id` nulo no cuentan como sesión, aunque las vistas/agregados crudos sí se incluyen en sus totales.
 
-Se cargan desde `dishes` como estado actual:
+La tasa por platillo usa sesiones distintas con evento de agregado frente a sesiones distintas con vista intencional de ese platillo. Si no hay sesiones con vista, no se muestra una tasa.
 
-- `rating`;
-- `likes_count`.
-
-Consecuencia:
-
-- “likes totales” es actualmente acumulado/current-state, no likes generados durante el rango;
-- ranking por rating representa rating actual, no rating del período;
-- ranking por likes representa contador actual, no likes del período.
-
-No etiquetar esas métricas como temporales sin cambiar su modelo de datos.
+`menu_view` solo existe desde el tracking canónico de TASK005; no se reconstruyen visitas históricas. La pantalla muestra esta limitación junto a los datos. La lectura de eventos canónicos depende de que la migración TASK005 esté aplicada en el entorno remoto.
 
 ## “Más” y “menos”
 
-Para eventos, los rankings se construyen desde IDs presentes en los eventos recuperados.
-
-Consecuencia:
-
-- “menos visitados” no incluye necesariamente platillos con cero eventos;
-- “menos categorías” no incluye necesariamente categorías con cero eventos.
-
-Si se quiere un verdadero ranking de menor rendimiento:
-
-- partir del catálogo completo;
-- asignar cero a entidades sin evento;
-- definir si inactivos participan.
+Los rankings de “Más vistos”, “Más agregados a Mi pedido” y “Categorías más vistas” ordenan los IDs con eventos del período y se unen al catálogo del restaurante actual. No muestran entidades sin eventos ni comparan rendimiento de ventas.
 
 ## Integridad del tracking
 
@@ -269,9 +223,10 @@ Con las limitaciones actuales, pueden presentarse como interacción aproximada:
 - conteo de vistas registradas;
 - conteo de agregados registrados;
 - conteo de vistas de categoría registradas;
-- ranking de entidades dentro de eventos recuperados;
-- rating actual;
-- likes acumulados actuales.
+- sesiones anónimas con visita al menú;
+- tasa de agregado por sesiones;
+- clicks registrados en WhatsApp;
+- rankings de entidades dentro del período seleccionado.
 
 Usar lenguaje de interacción, no de revenue.
 
