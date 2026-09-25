@@ -46,6 +46,7 @@ export default function DashboardCategories() {
   const [searchParams] = useSearchParams();
   const [items, setItems] = useState<CategoryRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [dishCountsUnavailable, setDishCountsUnavailable] = useState(false);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<CategoryRow | null>(null);
@@ -71,6 +72,7 @@ export default function DashboardCategories() {
   const load = async () => {
     if (!restaurant) return;
     setLoading(true);
+    setLoadError(false);
     const [categoriesResult, dishesResult] = await Promise.all([
       supabase
         .from("categories")
@@ -81,7 +83,13 @@ export default function DashboardCategories() {
     ]);
     if (categoriesResult.error) toast.error(categoriesResult.error.message);
     if (dishesResult.error) toast.error(dishesResult.error.message);
-    setDishCountsUnavailable(Boolean(dishesResult.error));
+    setDishCountsUnavailable(Boolean(categoriesResult.error || dishesResult.error));
+
+    if (categoriesResult.error) {
+      setLoadError(true);
+      setLoading(false);
+      return;
+    }
 
     const dishCounts = new Map<string, number>();
     for (const dish of dishesResult.data ?? []) {
@@ -99,7 +107,9 @@ export default function DashboardCategories() {
   };
 
   useEffect(() => {
-    load();
+    setItems([]);
+    setLoadError(false);
+    void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restaurant?.id]);
 
@@ -313,8 +323,26 @@ export default function DashboardCategories() {
         </Button>
       </div>
 
+      {loadError && items.length > 0 && (
+        <Card role="alert" className="mb-4">
+          <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
+            <p className="text-sm text-muted-foreground">
+              No se pudieron actualizar las categorías. Se conserva la información cargada.
+            </p>
+            <Button variant="outline" onClick={() => void load()}>Reintentar</Button>
+          </CardContent>
+        </Card>
+      )}
+
       {loading ? (
         <p className="text-sm text-muted-foreground">Cargando...</p>
+      ) : loadError && items.length === 0 ? (
+        <Card role="alert">
+          <CardContent className="flex flex-wrap items-center justify-center gap-3 py-10 text-center">
+            <p className="text-sm text-muted-foreground">No se pudieron cargar las categorías. Intenta de nuevo.</p>
+            <Button variant="outline" onClick={() => void load()}>Reintentar</Button>
+          </CardContent>
+        </Card>
       ) : items.length === 0 ? (
         <Card>
           <CardContent className="py-10 text-center text-muted-foreground">

@@ -5,6 +5,7 @@ import DashboardCategories from "./DashboardCategories";
 
 const mockData = vi.hoisted(() => ({
   categories: [] as Array<Record<string, unknown>>,
+  categoryQueryError: false,
   dishes: [] as Array<{ category_id: string | null }>,
   dishQueryError: false,
   updates: [] as Array<Record<string, unknown>>,
@@ -44,7 +45,10 @@ vi.mock("@/integrations/supabase/client", () => ({
       return {
         select: vi.fn(() => ({
           eq: vi.fn(() => ({
-            order: vi.fn(() => Promise.resolve({ data: mockData.categories, error: null })),
+            order: vi.fn(() => Promise.resolve({
+              data: mockData.categoryQueryError ? null : mockData.categories,
+              error: mockData.categoryQueryError ? { message: "No se pudieron cargar las categorías" } : null,
+            })),
           })),
         })),
         update: vi.fn((changes: Record<string, unknown>) => ({
@@ -105,6 +109,7 @@ const renderPage = () =>
 describe("DashboardCategories", () => {
   beforeEach(() => {
     mockData.categories = [category()];
+    mockData.categoryQueryError = false;
     mockData.dishes = [{ category_id: "category-1" }];
     mockData.dishQueryError = false;
     mockData.updates = [];
@@ -117,6 +122,32 @@ describe("DashboardCategories", () => {
 
     expect(await screen.findByText("1 platillo")).toBeInTheDocument();
     expect(screen.queryByText(/Posición\s+\d+/)).not.toBeInTheDocument();
+  });
+
+  it("shows a retry state instead of an empty catalog when categories fail to load", async () => {
+    mockData.categoryQueryError = true;
+    renderPage();
+
+    expect(await screen.findByText("No se pudieron cargar las categorías. Intenta de nuevo.")).toBeInTheDocument();
+    expect(screen.queryByText("Crea tu primera categoría para organizar el menú.")).not.toBeInTheDocument();
+
+    mockData.categoryQueryError = false;
+    fireEvent.click(screen.getByRole("button", { name: "Reintentar" }));
+    expect(await screen.findByText("1 platillo")).toBeInTheDocument();
+  });
+
+  it("keeps loaded categories and disables deletion when a refresh fails", async () => {
+    renderPage();
+    expect(await screen.findByText("1 platillo")).toBeInTheDocument();
+
+    mockData.categoryQueryError = true;
+    mockData.dishQueryError = true;
+    fireEvent.click(screen.getByRole("switch", { name: "Visible en el menú" }));
+
+    expect(await screen.findByText("No se pudieron actualizar las categorías. Se conserva la información cargada.")).toBeInTheDocument();
+    expect(screen.getByText("Pastas")).toBeInTheDocument();
+    expect(screen.getByText("Conteo no disponible")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Eliminar categoría Pastas" })).toBeDisabled();
   });
 
   it("uses plural wording for multiple dishes", async () => {

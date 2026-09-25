@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   signOut: vi.fn(),
   categories: [] as Array<{ id: string; name: string }>,
   dishes: [] as Array<Record<string, unknown>>,
+  loadErrors: new Set<string>(),
   from: vi.fn((table: string) => {
     const query = {} as {
       select: ReturnType<typeof vi.fn>;
@@ -16,7 +17,10 @@ const mocks = vi.hoisted(() => ({
     query.select = vi.fn(() => query);
     query.eq = vi.fn(() => query);
     query.order = vi.fn(() =>
-      Promise.resolve({ data: table === "categories" ? mocks.categories : mocks.dishes, error: null }),
+      Promise.resolve({
+        data: mocks.loadErrors.has(table) ? null : table === "categories" ? mocks.categories : mocks.dishes,
+        error: mocks.loadErrors.has(table) ? { message: `Could not load ${table}` } : null,
+      }),
     );
     return query;
   }),
@@ -54,6 +58,7 @@ describe("DashboardDishes contextual actions", () => {
   beforeEach(() => {
     mocks.categories = [];
     mocks.dishes = [];
+    mocks.loadErrors.clear();
   });
 
   it("labels and opens the create action as a new dish", async () => {
@@ -67,6 +72,23 @@ describe("DashboardDishes contextual actions", () => {
     fireEvent.click(screen.getByRole("button", { name: "Nuevo platillo" }));
 
     expect(screen.getByRole("heading", { name: "Nuevo platillo" })).toBeInTheDocument();
+  });
+
+  it("shows a retry state instead of an empty catalog when dishes fail to load", async () => {
+    mocks.loadErrors.add("dishes");
+    render(
+      <MemoryRouter initialEntries={["/dashboard/platillos"]}>
+        <DashboardDishes />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("No se pudieron cargar los platillos. Intenta de nuevo.")).toBeInTheDocument();
+    expect(screen.queryByText(/No hay platillos\. Crea el primero/)).not.toBeInTheDocument();
+
+    mocks.loadErrors.clear();
+    fireEvent.click(screen.getByRole("button", { name: "Reintentar" }));
+    await waitFor(() => expect(screen.queryByText("No se pudieron cargar los platillos. Intenta de nuevo.")).not.toBeInTheDocument());
+    expect(screen.getByText(/No hay platillos\. Crea el primero/)).toBeInTheDocument();
   });
 
   it("applies the category filter supplied by the category navigation link", async () => {

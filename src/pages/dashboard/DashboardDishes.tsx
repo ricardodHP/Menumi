@@ -93,6 +93,7 @@ export default function DashboardDishes() {
   const [dishes, setDishes] = useState<DishRow[]>([]);
   const [categories, setCategories] = useState<CategoryRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<DishRow | null>(null);
   const [form, setForm] = useState<DishForm>(emptyForm);
@@ -110,6 +111,7 @@ export default function DashboardDishes() {
   const load = async () => {
     if (!restaurant) return;
     setLoading(true);
+    setLoadError(false);
     const [dRes, cRes] = await Promise.all([
       supabase
         .from("dishes")
@@ -124,13 +126,23 @@ export default function DashboardDishes() {
     ]);
     if (dRes.error) toast.error(dRes.error.message);
     if (cRes.error) toast.error(cRes.error.message);
+
+    if (dRes.error || cRes.error) {
+      setLoadError(true);
+      setLoading(false);
+      return;
+    }
+
     setDishes((dRes.data ?? []) as DishRow[]);
     setCategories((cRes.data ?? []) as CategoryRow[]);
     setLoading(false);
   };
 
   useEffect(() => {
-    load();
+    setDishes([]);
+    setCategories([]);
+    setLoadError(false);
+    void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restaurant?.id]);
 
@@ -361,8 +373,26 @@ export default function DashboardDishes() {
         </div>
       </div>
 
+      {loadError && dishes.length > 0 && (
+        <Card role="alert" className="mb-4">
+          <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
+            <p className="text-sm text-muted-foreground">
+              No se pudieron actualizar los platillos. Se conserva la información cargada.
+            </p>
+            <Button variant="outline" onClick={() => void load()}>Reintentar</Button>
+          </CardContent>
+        </Card>
+      )}
+
       {loading ? (
         <p className="text-sm text-muted-foreground">Cargando...</p>
+      ) : loadError && dishes.length === 0 ? (
+        <Card role="alert">
+          <CardContent className="flex flex-wrap items-center justify-center gap-3 py-10 text-center">
+            <p className="text-sm text-muted-foreground">No se pudieron cargar los platillos. Intenta de nuevo.</p>
+            <Button variant="outline" onClick={() => void load()}>Reintentar</Button>
+          </CardContent>
+        </Card>
       ) : filtered.length === 0 ? (
         <Card>
           <CardContent className="py-10 text-center text-muted-foreground">
