@@ -68,7 +68,7 @@ export function useRestaurantData(
           .order("position", { ascending: true }),
         supabase
           .from("dishes")
-          .select("id, name, description, price, image_url, rating, likes_count, tags, category_id, position, is_active, is_available, show_rating")
+          .select("id, name, description, price, image_url, rating, likes_count, tags, category_id, position, is_active, is_available, show_rating, is_featured")
           .eq("restaurant_id", r.id)
           .eq("is_active", true)
           .order("position", { ascending: true }),
@@ -115,6 +115,7 @@ export function useRestaurantData(
         likes: d.likes_count,
         tags: d.tags ?? [],
         showRating: d.show_rating,
+        isFeatured: d.is_featured,
         isAvailable: d.is_available,
         reviewsCount: reviewCounts[d.id] ?? 0,
       }));

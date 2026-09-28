@@ -17,6 +17,7 @@ export interface Dish {
   likes: number;
   tags: string[];
   showRating: boolean;
+  isFeatured?: boolean;
   isAvailable?: boolean;
   reviewsCount?: number;
 }

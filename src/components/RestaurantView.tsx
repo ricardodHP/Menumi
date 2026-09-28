@@ -107,6 +107,13 @@ const RestaurantView = ({ restaurant, categories, dishes, isPreview = false }: R
     return result;
   }, [activeCategory, searchQuery, dishes, restaurant.showByRating]);
 
+  const featuredDishes = useMemo(
+    () => filteredDishes
+      .filter((dish) => dish.isFeatured)
+      .sort((a, b) => b.rating - a.rating),
+    [filteredDishes],
+  );
+
   // Handle ?dish=<id> deep link only when the dish belongs to this menu.
   useEffect(() => {
     const dishId = searchParams.get("dish");
@@ -168,6 +175,12 @@ const RestaurantView = ({ restaurant, categories, dishes, isPreview = false }: R
     if (!activeCategory) return null;
     if (activeCategory === "populares") return "Populares";
     return categories.find((c) => c.id === activeCategory)?.name ?? null;
+  }, [activeCategory, categories, searchQuery]);
+
+  const featuredContextLabel = useMemo(() => {
+    if (searchQuery.trim()) return `Resultados para “${searchQuery.trim()}”`;
+    if (!activeCategory || activeCategory === "populares") return null;
+    return categories.find((category) => category.id === activeCategory)?.name ?? null;
   }, [activeCategory, categories, searchQuery]);
 
   const handleReviewSubmitted = useCallback(() => {
@@ -271,6 +284,20 @@ const RestaurantView = ({ restaurant, categories, dishes, isPreview = false }: R
             </button>
           </div>
 
+          {viewMode === "ranked" && (
+            <div
+              className="flex items-center gap-1.5 px-3 py-2 text-sm text-muted-foreground"
+              aria-live="polite"
+            >
+              <Star className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <span>
+                {featuredContextLabel
+                  ? `Destacados · ${featuredContextLabel}`
+                  : "Todos los destacados"}
+              </span>
+            </div>
+          )}
+
           {viewMode === "grid" ? (
             <DishGrid
               dishes={filteredDishes}
@@ -279,8 +306,12 @@ const RestaurantView = ({ restaurant, categories, dishes, isPreview = false }: R
             />
           ) : (
             <DishGrid
-              dishes={[...filteredDishes].sort((a, b) => b.rating - a.rating)}
-              onDishClick={handleDishClick}
+              dishes={featuredDishes}
+              onDishClick={(index) => {
+                const dish = featuredDishes[index];
+                const feedIndex = filteredDishes.findIndex((item) => item.id === dish?.id);
+                if (feedIndex >= 0) handleDishClick(feedIndex);
+              }}
               resetKey={`${activeCategory ?? "none"}|${searchQuery}|${viewMode}`}
             />
           )}

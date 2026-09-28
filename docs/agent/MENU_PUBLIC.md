@@ -77,6 +77,12 @@ La interacción de categoría puede generar `category_view`.
 
 En Social, `DishGrid` permite exploración rápida.
 
+La pestaña de cuadrícula muestra el catálogo filtrado por categoría o búsqueda.
+La pestaña de estrella muestra únicamente platillos destacados (`is_featured`),
+conservando esos filtros y ordenándolos por calificación. Mientras está activa,
+una etiqueta bajo las pestañas indica la categoría o búsqueda aplicada, o que se
+muestran todos los destacados.
+
 Prioridades:
 
 - imagen;
